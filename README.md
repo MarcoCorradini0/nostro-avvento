@@ -1,5 +1,7 @@
 # 🎄 Il nostro Avvento
 
+[![CI](https://github.com/MarcoCorradini0/nostro-avvento/actions/workflows/ci.yml/badge.svg)](https://github.com/MarcoCorradini0/nostro-avvento/actions/workflows/ci.yml)
+
 Una piccola web app mobile-first per due persone lontane: un calendario dell'avvento
 con una sorpresa al giorno, e presto stato online, nevicata condivisa e un calendario
 per organizzarsi quando vedersi.
