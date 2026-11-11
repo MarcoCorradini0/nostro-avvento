@@ -1,0 +1,13 @@
+# Il Service da' un nome e un indirizzo stabile ai pod (che invece nascono e muoiono)
+# e distribuisce le richieste tra le repliche.
+apiVersion: v1
+kind: Service
+metadata:
+  name: avvento
+spec:
+  selector:
+    component: server
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

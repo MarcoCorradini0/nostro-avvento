@@ -1,0 +1,10 @@
+# Configurazione NON segreta: puo' stare tranquillamente su GitHub.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: avvento-config
+data:
+  TIMEZONE: "Europe/Rome"
+  ADVENT_FILE: "/content/advent.json"
+  # Togli il commento per provare "come se fosse" un altro giorno:
+  # FAKE_TODAY: "2026-12-05"

@@ -1,0 +1,33 @@
+# Kustomize mette insieme tutti i file e genera i Secret.
+# Deploy:  kubectl apply -k deploy/k8s
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: avvento
+
+labels:
+  - pairs:
+      app.kubernetes.io/name: avvento
+    includeSelectors: true
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - deployment.yaml
+  - service.yaml
+  - ingress.yaml
+
+images:
+  - name: avvento
+    newTag: "0.1.1"
+
+# I Secret si generano da file NON committati (vedi secrets/README.md).
+# Kustomize aggiunge un hash al nome: se cambi le chiavi o i contenuti,
+# i pod si riavviano da soli con i valori nuovi.
+secretGenerator:
+  - name: avvento-keys
+    envs:
+      - secrets/keys.env
+  - name: avvento-content
+    files:
+      - advent.json=secrets/advent.json

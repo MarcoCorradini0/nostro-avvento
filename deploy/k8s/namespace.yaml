@@ -1,0 +1,5 @@
+# Uno "spazio" separato nel cluster solo per questa app.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: avvento

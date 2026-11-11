@@ -1,0 +1,10 @@
+.gradle/
+build/
+.idea/
+*.iml
+out/
+.kotlin/
+
+# I contenuti veri dell'avvento sono una sorpresa: MAI su GitHub
+advent.json
+deploy/k8s/secrets/keys.env

@@ -1,0 +1,65 @@
+# Il Deployment dice a Kubernetes: "tieni sempre accese N copie (pod) di questa app".
+# Se un pod muore, Kubernetes ne crea un altro da solo.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: avvento
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      component: server
+  template:
+    metadata:
+      labels:
+        component: server
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: server
+          image: avvento
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          # Variabili d'ambiente: prima la ConfigMap, poi i Secret (chiavi e nomi)
+          envFrom:
+            - configMapRef:
+                name: avvento-config
+            - secretRef:
+                name: avvento-keys
+          volumeMounts:
+            - name: content
+              mountPath: /content
+              readOnly: true
+            # Il filesystem e' in sola lettura: a Java/Netty serve comunque una /tmp scrivibile.
+            - name: tmp
+              mountPath: /tmp
+          # Kubernetes chiede "sei pronto?" prima di mandargli traffico...
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          # ...e "sei ancora vivo?" per riavviarlo se si blocca.
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 256Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: content
+          secret:
+            secretName: avvento-content
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi

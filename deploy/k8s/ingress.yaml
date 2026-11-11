@@ -1,0 +1,18 @@
+# L'Ingress e' la "porta d'ingresso" dall'esterno: instrada un dominio verso il Service.
+# In locale k3d usa Traefik; online aggiungeremo HTTPS con Let's Encrypt.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: avvento
+spec:
+  rules:
+    - host: avvento.localhost
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: avvento
+                port:
+                  name: http
