@@ -20,6 +20,8 @@ data class Config(
     val allowedOrigins: List<String>,
     /** Cartella con la pagina web, servita solo se esiste (sviluppo locale). */
     val webDir: String,
+    /** PostgreSQL per gli incontri (es. Neon). Null = in memoria. */
+    val databaseUrl: String?,
 ) {
     companion object {
         fun fromEnv(env: Map<String, String> = System.getenv()): Config {
@@ -36,6 +38,7 @@ data class Config(
                 fakeToday = env["FAKE_TODAY"]?.let(LocalDate::parse),
                 allowedOrigins = env["ALLOWED_ORIGINS"].orEmpty().split(',').map { it.trim().trimEnd('/') }.filter { it.isNotEmpty() },
                 webDir = env["WEB_DIR"] ?: "web",
+                databaseUrl = env["DATABASE_URL"]?.takeIf { it.isNotBlank() },
             )
         }
     }

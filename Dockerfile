@@ -16,8 +16,9 @@ RUN ./gradlew --no-daemon -q buildFatJar -x test && mv build/libs/*-all.jar /app
 # jlink: un Java che contiene solo i moduli che servono davvero.
 # jdeps segnalerebbe anche java.desktop (java.beans della libreria di config HOCON) e
 # java.instrument (debugger delle coroutine): sono parti opzionali che non usiamo, quindi le escludiamo.
+# java.sql serve al driver PostgreSQL, jdk.crypto.ec alla connessione cifrata (TLS) verso Neon.
 RUN jlink \
-      --add-modules java.base,java.logging,java.management,jdk.unsupported \
+      --add-modules java.base,java.logging,java.management,java.sql,jdk.crypto.ec,jdk.unsupported \
       --strip-debug --no-man-pages --no-header-files --compress=zip-6 \
       --generate-cds-archive \
       --output /jre

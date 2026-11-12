@@ -39,3 +39,9 @@ services:
         sync: false
       - key: USER2_KEY
         sync: false
+      # Database per gli incontri (Neon, piano free). Senza, gli incontri stanno in memoria
+      # e si perdono quando Render addormenta il servizio.
+      # NB: su un servizio gia' creato Render non chiede i nuovi sync:false: va aggiunta a mano
+      # in Environment.
+      - key: DATABASE_URL
+        sync: false

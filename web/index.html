@@ -15,6 +15,7 @@
   <header>
     <h1>Il nostro Avvento</h1>
     <p id="greeting" class="sub">&nbsp;</p>
+    <div id="presence" class="presence" hidden aria-live="polite"></div>
   </header>
 
   <main>
@@ -24,8 +25,21 @@
       <div class="dots" aria-hidden="true"><span></span><span></span><span></span></div>
     </div>
     <p id="error" class="error" hidden></p>
-    <div id="grid" class="grid" aria-label="Caselle del calendario"></div>
+
+    <section id="view-advent" aria-label="Calendario dell'avvento">
+      <div id="grid" class="grid"></div>
+    </section>
+
+    <section id="view-meetings" aria-label="Incontri" hidden>
+      <button id="new-meeting" class="btn" type="button">＋ Proponi un giorno</button>
+      <div id="meetings" class="meetings"></div>
+    </section>
   </main>
+
+  <nav id="tabs" class="tabs" hidden>
+    <button type="button" data-view="advent" class="active">🎄<span>Avvento</span></button>
+    <button type="button" data-view="meetings">📅<span>Incontri</span><b id="badge" class="badge" hidden></b></button>
+  </nav>
 
   <dialog id="door-dialog">
     <article>
@@ -36,6 +50,21 @@
       <a id="dlg-link" class="btn" target="_blank" rel="noopener noreferrer" hidden>Apri</a>
       <button id="dlg-close" class="btn secondary" type="button">Chiudi</button>
     </article>
+  </dialog>
+
+  <dialog id="meeting-dialog">
+    <form id="meeting-form" method="dialog">
+      <h2 id="mf-title">Proponi un giorno</h2>
+      <label>Quando
+        <input id="mf-date" type="date" required>
+      </label>
+      <label>Cosa facciamo?
+        <textarea id="mf-text" rows="6" placeholder="Idee, posti, orari… (max 200 parole)"></textarea>
+      </label>
+      <p id="mf-count" class="counter">0 / 200 parole</p>
+      <button class="btn" type="submit" id="mf-send">Invia</button>
+      <button class="btn secondary" type="button" id="mf-cancel">Annulla</button>
+    </form>
   </dialog>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>

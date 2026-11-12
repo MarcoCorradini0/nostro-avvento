@@ -19,7 +19,7 @@ resources:
 
 images:
   - name: avvento
-    newTag: "0.2.0"
+    newTag: "0.3.0"
 
 # I Secret si generano da file NON committati (vedi secrets/README.md).
 # Kustomize aggiunge un hash al nome: se cambi le chiavi o i contenuti,

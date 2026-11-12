@@ -5,7 +5,11 @@ kind: Deployment
 metadata:
   name: avvento
 spec:
-  replicas: 2
+  # 1 sola replica: "chi e' online" vive nella memoria del pod, e senza DATABASE_URL anche
+  # gli incontri. Con 2 pod Marco potrebbe finire sul primo e lei sul secondo, e non si
+  # vedrebbero. Per scalare servono un database condiviso (Postgres) e un canale tra i pod
+  # (es. Redis pub/sub): un bell'esercizio per dopo!
+  replicas: 1
   selector:
     matchLabels:
       component: server

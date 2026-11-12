@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "dev.avvento"
-version = "0.2.0"
+version = "0.3.0"
 
 application {
     mainClass.set("dev.avvento.ApplicationKt")
@@ -22,6 +22,8 @@ dependencies {
     implementation("io.ktor:ktor-server-core")
     implementation("io.ktor:ktor-server-cio")
     implementation("io.ktor:ktor-server-cors")
+    implementation("io.ktor:ktor-server-websockets")
+    implementation("org.postgresql:postgresql:42.7.14")
     implementation("io.ktor:ktor-server-content-negotiation")
     implementation("io.ktor:ktor-serialization-kotlinx-json")
     // Logger minimale: niente XML da leggere all'avvio, avvio piu' rapido.
@@ -29,6 +31,7 @@ dependencies {
 
     testImplementation(kotlin("test"))
     testImplementation("io.ktor:ktor-server-test-host")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test")
 }
 
 // Compiliamo per Java 21: e' la versione che useremo nell'immagine Docker.
