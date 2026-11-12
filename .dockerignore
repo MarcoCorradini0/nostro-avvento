@@ -1,8 +1,11 @@
-.gradle
-build
-.idea
-.kotlin
-*.iml
-.git
-deploy
-advent.json
+# Nell'immagine entra solo cio' che serve alla build: tutto il resto resta fuori
+# (build piu' veloce, nessun segreto per sbaglio).
+*
+!gradlew
+!gradle/
+!settings.gradle.kts
+!build.gradle.kts
+!gradle.properties
+!src/
+!web/
+!advent.example.json

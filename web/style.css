@@ -22,7 +22,7 @@ body {
   padding: env(safe-area-inset-top) 16px calc(24px + env(safe-area-inset-bottom));
 }
 
-#snow { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+#snow { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
 
 header, main { position: relative; z-index: 1; max-width: 560px; margin: 0 auto; }
 
@@ -65,6 +65,39 @@ h1 { font-family: Georgia, "Times New Roman", serif; font-weight: 400; font-size
 .door.opened::after { content: "✓"; position: absolute; right: 7px; bottom: 3px; font-size: .75rem; }
 
 .door.shake { animation: shake .4s; }
+
+/* Casella 25: compare solo a Natale, larga tutta la riga e alta 3 caselle */
+.door.christmas {
+  grid-column: 1 / -1;
+  grid-row: span 3;
+  aspect-ratio: auto;
+  min-height: 60vw;
+  max-height: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: linear-gradient(145deg, var(--gold), var(--red) 70%) !important;
+  color: #fff;
+  font-size: 4.5rem;
+  box-shadow: 0 0 0 3px var(--gold), 0 0 40px rgba(244, 201, 93, .8);
+  animation: glow 2s ease-in-out infinite;
+}
+.door.christmas small { font-size: 1.1rem; font-family: system-ui, sans-serif; letter-spacing: .05em; }
+.door.christmas.opened { color: #fff; }
+.door.christmas::after { content: none; }
+
+/* Loader: si vede solo se il server si sta svegliando (piano free di Render) */
+.loader { text-align: center; padding: 48px 0; color: var(--muted); }
+.loader-icon { font-size: 4rem; animation: bob 1.6s ease-in-out infinite; }
+.loader p { margin: 12px 0; font-size: 1.05rem; }
+.dots { display: flex; justify-content: center; gap: 8px; }
+.dots span { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); animation: blink 1.2s infinite; }
+.dots span:nth-child(2) { animation-delay: .2s; }
+.dots span:nth-child(3) { animation-delay: .4s; }
+@keyframes bob { 50% { transform: translateY(-8px) rotate(-4deg); } }
+@keyframes blink { 50% { opacity: .2; } }
 
 @keyframes glow { 50% { box-shadow: 0 0 0 2px var(--gold), 0 0 28px rgba(244, 201, 93, .9); } }
 @keyframes shake { 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
@@ -114,5 +147,5 @@ dialog h2 { font-family: Georgia, serif; font-weight: 400; margin: 0 0 10px; }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
 @media (prefers-reduced-motion: reduce) {
-  .door.ready, .door.shake, dialog[open] article { animation: none; }
+  .door.ready, .door.shake, .door.christmas, dialog[open] article, .loader-icon, .dots span { animation: none; }
 }

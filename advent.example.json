@@ -2,5 +2,6 @@
   { "day": 1, "type": "text", "title": "Benvenuta!", "text": "Da oggi ogni giorno c'è una piccola sorpresa per te. Non sbirciare avanti, tanto non si può 😄" },
   { "day": 2, "type": "song", "title": "Una canzone per te", "text": "Ascoltala e pensa a me.", "url": "https://www.youtube.com/" },
   { "day": 3, "type": "voucher", "title": "Buono", "text": "Vale una videochiamata quando vuoi tu, anche alle 2 di notte." },
-  { "day": 4, "type": "question", "title": "Domanda del giorno", "text": "Qual è il ricordo più bello della tua infanzia?" }
+  { "day": 4, "type": "question", "title": "Domanda del giorno", "text": "Qual è il ricordo più bello della tua infanzia?" },
+  { "day": 25, "type": "christmas", "title": "Buon Natale ❤️", "text": "La sorpresa più grande è per oggi." }
 ]

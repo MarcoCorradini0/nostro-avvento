@@ -1,6 +1,5 @@
-# CI: a ogni push e pull request esegue i test.
-# Su main, se i test passano, costruisce l'immagine Docker e la pubblica su GHCR
-# (ghcr.io/<utente>/<repo>), da dove la scarichera' il cluster Kubernetes online.
+# CI: esegue i test a ogni push e pull request.
+# Render fa il deploy solo se questo controllo e' verde (autoDeployTrigger: checksPass).
 name: CI
 
 on:
@@ -11,9 +10,15 @@ on:
 permissions:
   contents: read
 
+# Se fai due push di fila, la CI del primo viene annullata: niente lavoro inutile.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
@@ -22,48 +27,7 @@ jobs:
           distribution: temurin
           java-version: "21"
 
+      # Cache di Gradle e dipendenze tra un'esecuzione e l'altra.
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Test
-        run: ./gradlew test
-
-  image:
-    needs: test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write # serve per pubblicare su GHCR
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Versione dal build.gradle.kts
-        id: version
-        run: echo "value=$(grep -oP '^version = "\K[^"]+' build.gradle.kts)" >> "$GITHUB_OUTPUT"
-
-      - uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      # Calcola nome (in minuscolo) e tag dell'immagine: versione, sha del commit e "latest"
-      - id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository }}
-          tags: |
-            type=raw,value=${{ steps.version.outputs.value }}
-            type=sha
-            type=raw,value=latest
-
-      - uses: docker/setup-buildx-action@v3
-
-      - uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+      - run: ./gradlew test

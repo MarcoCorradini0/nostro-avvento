@@ -3,17 +3,44 @@
 [![CI](https://github.com/MarcoCorradini0/nostro-avvento/actions/workflows/ci.yml/badge.svg)](https://github.com/MarcoCorradini0/nostro-avvento/actions/workflows/ci.yml)
 
 Una piccola web app mobile-first per due persone lontane: un calendario dell'avvento
-con una sorpresa al giorno, e presto stato online, nevicata condivisa e un calendario
-per organizzarsi quando vedersi.
+con una sorpresa al giorno (e una casella segreta per Natale), e presto stato online,
+nevicata condivisa e un calendario per organizzarsi quando vedersi.
 
 Progetto personale per imparare **Kotlin** (backend Ktor) e **Kubernetes**.
 
+## Architettura (tutto gratis)
+
+```
+Telefono ──► GitHub Pages (pagina web/, CDN, sempre accesa)
+                 │  fetch + header X-Key, CORS solo da Pages
+                 ▼
+             Render Free (API Ktor in Docker, si addormenta dopo 15 min)
+```
+
+- La pagina si apre subito da GitHub Pages. Se l'API sta dormendo, mostra un loader
+  e riprova finché il server non si sveglia.
+- In locale la stessa immagine gira anche su **Kubernetes** (k3d) con 2 repliche.
+
 ## Stack
 
-- **Backend:** Kotlin 2.4 + Ktor 3 (Netty), kotlinx.serialization
-- **Frontend:** HTML/CSS/JS senza framework, mobile-first
-- **Build:** Gradle 9 (Kotlin DSL)
-- **Deploy (in arrivo):** Docker → Kubernetes (k3d in locale, k3s online)
+- **Backend:** Kotlin 2.4 + Ktor 3 (motore CIO), kotlinx.serialization, slf4j-simple
+- **Frontend:** HTML/CSS/JS senza framework né build, mobile-first
+- **Build:** Gradle 9 (Kotlin DSL, configuration cache)
+- **Immagine:** Java ridotto con jlink + Class Data Sharing (CDS)
+- **CI/CD:** GitHub Actions (test, Pages) → Render (deploy solo se i test passano)
+
+### Avvio veloce
+
+Misurato con i limiti di Render Free (0.1 CPU, 512 MB):
+
+| | prima | dopo |
+|---|---|---|
+| Avvio della JVM fino a `/healthz` | ~23 s | **~6 s** |
+| RAM | 61 MB | **40 MB** |
+| Immagine | 318 MB | **164 MB** |
+
+Cosa fa la differenza: CIO al posto di Netty, logger minimale, jlink con solo 4 moduli,
+archivio CDS generato durante la build, `-XX:TieredStopAtLevel=1` e `-XX:+UseSerialGC`.
 
 ## Avvio in locale
 
@@ -25,10 +52,10 @@ Requisiti: JDK 21+ (va bene anche quello incluso in IntelliJ).
 
 Poi apri <http://localhost:8080/?k=dev-chiave-1> (oppure `dev-chiave-2` per l'altra persona).
 
-Per provare come se fosse già dicembre:
+Per provare come se fosse un altro giorno (es. Natale, per vedere la casella 25):
 
 ```bash
-FAKE_TODAY=2026-12-05 ./gradlew run
+FAKE_TODAY=2026-12-25 ./gradlew run
 ```
 
 Test:
@@ -36,6 +63,19 @@ Test:
 ```bash
 ./gradlew test
 ```
+
+## Online (Render + GitHub Pages)
+
+1. **Render:** New → Blueprint → scegli questo repo. Render legge [`render.yaml`](render.yaml)
+   e chiede i valori segreti (`USER1_NAME`, `USER1_KEY`, `USER2_NAME`, `USER2_KEY`).
+   Poi, nel servizio, *Environment → Secret Files* → aggiungi `advent.json`.
+2. **GitHub:** *Settings → Pages → Source: GitHub Actions*, poi in
+   *Settings → Secrets and variables → Actions → Variables* crea `API_BASE` con
+   l'indirizzo del servizio Render (es. `https://nostro-avvento.onrender.com`).
+3. I link da mandare: `https://marcocorradini0.github.io/nostro-avvento/?k=<chiave>`.
+
+Da lì in poi basta `git push`: i test girano, Render aggiorna l'API se sono verdi,
+e Pages aggiorna la pagina solo se è cambiato qualcosa in `web/`.
 
 ## Su Kubernetes in locale (k3d)
 
@@ -50,8 +90,8 @@ cp advent.example.json deploy/k8s/secrets/advent.json
 k3d cluster create avvento -p "8090:80@loadbalancer" --api-port 127.0.0.1:6550 --wait
 
 # 3. Build dell'immagine e import nel cluster (a ogni nuova versione)
-docker build -t avvento:0.1.1 .
-k3d image import avvento:0.1.1 -c avvento
+docker build -t avvento:0.2.0 .
+k3d image import avvento:0.2.0 -c avvento
 
 # 4. Deploy
 kubectl apply -k deploy/k8s
@@ -79,9 +119,11 @@ Per una nuova versione: aumenta `version` in `build.gradle.kts` e `newTag` in
 | `PORT` | `8080` | Porta HTTP |
 | `USER1_NAME` / `USER2_NAME` | `Io` / `Lei` | Nomi mostrati |
 | `USER1_KEY` / `USER2_KEY` | `dev-chiave-1/2` | Chiavi segrete dei link personali. **In produzione cambiale!** |
-| `ADVENT_FILE` | `advent.example.json` | File con il contenuto delle 24 caselle |
+| `ADVENT_FILE` | `advent.example.json` | File con il contenuto delle caselle |
 | `ADVENT_YEAR` | anno corrente | Anno del calendario |
 | `TIMEZONE` | `Europe/Rome` | Fuso orario per lo sblocco |
+| `ALLOWED_ORIGINS` | – | Siti che possono chiamare l'API (CORS), separati da virgola |
+| `WEB_DIR` | `web` | Cartella della pagina, servita solo se esiste |
 | `FAKE_TODAY` | – | Solo per test: finge che oggi sia questa data |
 
 ## Contenuti dell'avvento
@@ -89,7 +131,11 @@ Per una nuova versione: aumenta `version` in `build.gradle.kts` e `newTag` in
 Copia `advent.example.json` in `advent.json` (che è in `.gitignore`, così le sorprese
 non finiscono su GitHub) e avvia con `ADVENT_FILE=advent.json`.
 
-Tipi di casella: `text` 💌, `song` 🎵, `voucher` 🎟️, `question` ❓, `movie` 🎬, `recipe` 🍪.
+- Caselle **1–24**: si vedono sempre, si aprono dal giorno N dicembre.
+- Casella **25**: la sorpresa di Natale. Il server non la manda proprio fino al 25,
+  poi compare in alto, grande quanto 12 caselle, e fa nevicare forte.
+
+Tipi di casella: `text` 💌, `song` 🎵, `voucher` 🎟️, `question` ❓, `movie` 🎬, `recipe` 🍪, `christmas` 🎄.
 Il campo `url` (facoltativo) deve iniziare con `https://`.
 
 ## Sicurezza e privacy
@@ -97,12 +143,14 @@ Il campo `url` (facoltativo) deve iniziare con `https://`.
 - Nessuna registrazione, nessuna email: ogni persona ha un link personale con una chiave segreta.
 - Le chiavi sono confrontate a tempo costante e non sono mai nel codice in produzione.
 - Il server invia il contenuto di una casella **solo** dopo la data di sblocco (ora del server).
+- CORS: l'API accetta chiamate dal browser solo dal sito configurato.
 - Il frontend usa sempre `textContent`, mai `innerHTML`: niente HTML iniettato.
+- Container non-root, filesystem in sola lettura su Kubernetes.
 
 ## Roadmap
 
-- [x] Calendario dell'avvento
-- [x] Dockerfile + deploy su Kubernetes (k3d)
-- [ ] Online su k3s con HTTPS
+- [x] Calendario dell'avvento + casella segreta di Natale
+- [x] Dockerfile ottimizzato + deploy su Kubernetes (k3d)
+- [ ] Online su Render + GitHub Pages
 - [ ] Stato online 🟢/🔴 via WebSocket + nevicata quando ci siamo tutti e due
 - [ ] Calendario incontri con richiesta / accetta / rifiuta / modifica

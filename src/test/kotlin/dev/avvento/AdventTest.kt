@@ -37,6 +37,19 @@ class AdventTest {
     }
 
     @Test
+    fun `la casella 25 e' invisibile fino a Natale`() {
+        assertTrue(calendar.doors(LocalDate.of(2026, 12, 24)).none { it.day == 25 })
+        assertEquals(24, calendar.doors(LocalDate.of(2026, 12, 24)).size)
+    }
+
+    @Test
+    fun `il 25 dicembre compare la casella speciale, gia' aperta`() {
+        val doors = calendar.doors(LocalDate.of(2026, 12, 25))
+        assertEquals(25, doors.size)
+        assertTrue(doors.last().let { it.day == 25 && it.unlocked })
+    }
+
+    @Test
     fun `senza chiave l'API risponde 401 e con la chiave giusta 200`() = testApplication {
         val config = Config.fromEnv(mapOf("FAKE_TODAY" to "2026-12-01", "ADVENT_YEAR" to "2026"))
         application { module(config, calendar) }
@@ -47,5 +60,23 @@ class AdventTest {
         val ok = client.get("/api/advent") { header("X-Key", "dev-chiave-2") }
         assertEquals(HttpStatusCode.OK, ok.status)
         assertFalse(ok.bodyAsText().contains("SEGRETO"))
+    }
+
+    @Test
+    fun `CORS accetta solo il sito autorizzato`() = testApplication {
+        val config = Config.fromEnv(mapOf("ALLOWED_ORIGINS" to "https://esempio.github.io"))
+        application { module(config, calendar) }
+
+        val allowed = client.get("/api/me") {
+            header("Origin", "https://esempio.github.io")
+            header("X-Key", "dev-chiave-1")
+        }
+        assertEquals("https://esempio.github.io", allowed.headers["Access-Control-Allow-Origin"])
+
+        val other = client.get("/api/me") {
+            header("Origin", "https://sito-cattivo.com")
+            header("X-Key", "dev-chiave-1")
+        }
+        assertEquals(HttpStatusCode.Forbidden, other.status)
     }
 }

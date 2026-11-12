@@ -1,0 +1,41 @@
+# Render "Blueprint": descrive come Render deve far girare l'API.
+# Render legge questo file dal repo GitHub quando crei il servizio (New -> Blueprint).
+services:
+  - type: web
+    name: nostro-avvento
+    runtime: docker              # usa il nostro Dockerfile
+    plan: free                   # piano gratuito
+    region: frankfurt            # il datacenter piu' vicino all'Italia (non si cambia dopo)
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /healthz    # Render controlla qui che l'app sia viva
+    autoDeployTrigger: checksPass # deploy solo se i test su GitHub sono verdi
+    # Ricostruisce l'immagine solo se cambia qualcosa che ci finisce dentro.
+    buildFilter:
+      paths:
+        - src/**
+        - web/**
+        - gradle/**
+        - build.gradle.kts
+        - settings.gradle.kts
+        - gradle.properties
+        - Dockerfile
+        - advent.example.json
+    envVars:
+      - key: TIMEZONE
+        value: Europe/Rome
+      # La pagina vera sta su GitHub Pages: solo quel sito puo' chiamare l'API.
+      - key: ALLOWED_ORIGINS
+        value: https://marcocorradini0.github.io
+      # Il file con le sorprese vere lo carichi a mano su Render come "Secret File"
+      # chiamato advent.json: Render lo mette in /etc/secrets/advent.json.
+      - key: ADVENT_FILE
+        value: /etc/secrets/advent.json
+      # sync: false = il valore NON e' nel repo: Render te lo chiede quando crei il servizio.
+      - key: USER1_NAME
+        sync: false
+      - key: USER1_KEY
+        sync: false
+      - key: USER2_NAME
+        sync: false
+      - key: USER2_KEY
+        sync: false

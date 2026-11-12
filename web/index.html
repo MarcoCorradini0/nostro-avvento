@@ -18,6 +18,11 @@
   </header>
 
   <main>
+    <div id="loader" class="loader" hidden>
+      <div class="loader-icon" aria-hidden="true">⛄</div>
+      <p id="loader-text">Sto svegliando il calendario…</p>
+      <div class="dots" aria-hidden="true"><span></span><span></span><span></span></div>
+    </div>
     <p id="error" class="error" hidden></p>
     <div id="grid" class="grid" aria-label="Caselle del calendario"></div>
   </main>
@@ -35,6 +40,7 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="app.js"></script>
+  <script src="config.js"></script>
+  <script src="app.js" defer></script>
 </body>
 </html>

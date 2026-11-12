@@ -16,6 +16,10 @@ data class Config(
     val adventYear: Int,
     /** Solo per i test: finge che oggi sia questa data (es. 2026-12-05). */
     val fakeToday: LocalDate?,
+    /** Siti autorizzati a chiamare l'API (es. https://utente.github.io). Vuoto = stessa origine. */
+    val allowedOrigins: List<String>,
+    /** Cartella con la pagina web, servita solo se esiste (sviluppo locale). */
+    val webDir: String,
 ) {
     companion object {
         fun fromEnv(env: Map<String, String> = System.getenv()): Config {
@@ -30,6 +34,8 @@ data class Config(
                 zone = zone,
                 adventYear = env["ADVENT_YEAR"]?.toInt() ?: LocalDate.now(zone).year,
                 fakeToday = env["FAKE_TODAY"]?.let(LocalDate::parse),
+                allowedOrigins = env["ALLOWED_ORIGINS"].orEmpty().split(',').map { it.trim().trimEnd('/') }.filter { it.isNotEmpty() },
+                webDir = env["WEB_DIR"] ?: "web",
             )
         }
     }

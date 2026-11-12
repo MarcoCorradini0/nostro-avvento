@@ -1,25 +1,29 @@
 package dev.avvento
 
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
+import io.ktor.server.cio.CIO
 import io.ktor.server.engine.embeddedServer
-import io.ktor.server.http.content.staticResources
-import io.ktor.server.netty.Netty
-import io.ktor.server.plugins.calllogging.CallLogging
+import io.ktor.server.http.content.staticFiles
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.server.plugins.statuspages.StatusPages
+import io.ktor.server.plugins.cors.routing.CORS
 import io.ktor.server.response.header
 import io.ktor.server.response.respond
+import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 import kotlinx.serialization.Serializable
+import java.io.File
 
 fun main() {
     val config = Config.fromEnv()
-    embeddedServer(Netty, port = config.port, host = "0.0.0.0") {
+    // CIO: motore HTTP scritto in Kotlin, leggero e veloce ad avviarsi.
+    embeddedServer(CIO, port = config.port, host = "0.0.0.0") {
         module(config)
     }.start(wait = true)
 }
@@ -36,18 +40,22 @@ fun Application.module(
 ) {
     val users = UserDirectory(config.users)
 
-    install(CallLogging)
     install(ContentNegotiation) { json() }
-    install(StatusPages) {
-        exception<Throwable> { call, cause ->
-            this@module.environment.log.error("Errore non gestito", cause)
-            call.respond(HttpStatusCode.InternalServerError, ErrorResponse("Qualcosa e' andato storto"))
+
+    // La pagina sta su GitHub Pages (altro dominio): il browser chiede il permesso (CORS).
+    // Accettiamo SOLO le origini configurate, non "tutto il mondo".
+    if (config.allowedOrigins.isNotEmpty()) {
+        install(CORS) {
+            config.allowedOrigins.forEach { allowHost(it.substringAfter("://"), schemes = listOf(it.substringBefore("://"))) }
+            allowMethod(HttpMethod.Get)
+            allowHeader("X-Key")
+            maxAgeInSeconds = 86_400 // il browser ricorda il permesso per un giorno
         }
     }
 
     routing {
-        // Kubernetes chiamera' questo endpoint per sapere se il pod e' vivo.
-        get("/healthz") { call.respond(mapOf("status" to "ok")) }
+        // Render (e Kubernetes) chiamano questo endpoint per sapere se l'app e' viva.
+        get("/healthz") { call.respondText("ok") }
 
         route("/api") {
             get("/me") {
@@ -60,12 +68,13 @@ fun Application.module(
                 users.findByKey(call.keyHeader())
                     ?: return@get call.respond(HttpStatusCode.Unauthorized, ErrorResponse("Link non valido"))
                 val today = config.today()
-                call.response.header("Cache-Control", "no-store")
+                call.response.header(HttpHeaders.CacheControl, "no-store")
                 call.respond(AdventResponse(today.toString(), advent.doors(today)))
             }
         }
 
-        // Il sito (HTML/CSS/JS) sta in src/main/resources/static
-        staticResources("/", "static")
+        // Solo in sviluppo: se c'e' la cartella web/ la serviamo, cosi' basta ./gradlew run.
+        // In produzione la pagina sta su GitHub Pages e l'immagine Docker non contiene web/.
+        File(config.webDir).takeIf { it.isDirectory }?.let { staticFiles("/", it) }
     }
 }

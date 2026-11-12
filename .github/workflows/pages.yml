@@ -1,0 +1,44 @@
+# Pubblica la pagina (cartella web/) su GitHub Pages: gratis, sempre accesa, veloce (CDN).
+# Parte solo quando cambia qualcosa in web/.
+name: Pages
+
+on:
+  push:
+    branches: [main]
+    paths: ["web/**", ".github/workflows/pages.yml"]
+  workflow_dispatch: # per lanciarla a mano dalla tab Actions
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    # Finche' non c'e' l'indirizzo di Render (variabile API_BASE) il job viene saltato, non fallisce.
+    if: vars.API_BASE != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # L'indirizzo dell'API su Render sta nella variabile del repo API_BASE
+      # (Settings -> Secrets and variables -> Actions -> Variables).
+      - name: Configura l'indirizzo dell'API
+        env:
+          API_BASE: ${{ vars.API_BASE }}
+        run: printf 'window.AVVENTO_API = "%s";\n' "$API_BASE" > web/config.js
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
+      - id: deployment
+        uses: actions/deploy-pages@v4
