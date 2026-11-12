@@ -22,7 +22,7 @@ Telefono ──► GitHub Pages (pagina web/, CDN, sempre accesa)
              Render Free (API Ktor in Docker, si addormenta dopo 15 min)
                  │  JDBC + TLS
                  ▼
-             Neon Free (PostgreSQL per gli incontri, non scade)
+             Render Postgres Free (incontri; dura 30 giorni, poi si torna alla memoria)
 ```
 
 - La pagina si apre subito da GitHub Pages. Se l'API sta dormendo, mostra un loader
@@ -35,7 +35,7 @@ Telefono ──► GitHub Pages (pagina web/, CDN, sempre accesa)
 - **Frontend:** HTML/CSS/JS senza framework né build, mobile-first
 - **Build:** Gradle 9 (Kotlin DSL, configuration cache)
 - **Immagine:** Java ridotto con jlink + Class Data Sharing (CDS)
-- **CI/CD:** GitHub Actions (test, Pages) → Render (deploy solo se i test passano)
+- **CI/CD:** GitHub Actions (test, Pages) + deploy automatico su Render a ogni push
 
 ### Avvio veloce
 
@@ -77,15 +77,17 @@ Test:
 1. **Render:** New → Blueprint → scegli questo repo. Render legge [`render.yaml`](render.yaml)
    e chiede i valori segreti (`USER1_NAME`, `USER1_KEY`, `USER2_NAME`, `USER2_KEY`).
    Poi, nel servizio, *Environment → Secret Files* → aggiungi `advent.json`.
-   Per salvare gli incontri: crea un progetto gratuito su [Neon](https://neon.com) (regione
-   Frankfurt), copia la *connection string* e aggiungila su Render come `DATABASE_URL`.
+   Per salvare gli incontri: *New → Postgres* (regione Frankfurt, piano Free), copia
+   l'*Internal Database URL* e aggiungilo nel servizio come `DATABASE_URL`.
+   Il Postgres free dura 30 giorni: crealo pochi giorni prima del 1° dicembre.
 2. **GitHub:** *Settings → Pages → Source: GitHub Actions*, poi in
    *Settings → Secrets and variables → Actions → Variables* crea `API_BASE` con
    l'indirizzo del servizio Render (es. `https://nostro-avvento.onrender.com`).
 3. I link da mandare: `https://marcocorradini0.github.io/nostro-avvento/?k=<chiave>`.
 
-Da lì in poi basta `git push`: i test girano, Render aggiorna l'API se sono verdi,
-e Pages aggiorna la pagina solo se è cambiato qualcosa in `web/`.
+Da lì in poi basta `git push`: i test girano su GitHub, Render ricostruisce l'API
+(solo se è cambiato qualcosa che finisce nell'immagine) e Pages aggiorna la pagina
+solo se è cambiato qualcosa in `web/`.
 
 ## Su Kubernetes in locale (k3d)
 
@@ -167,5 +169,5 @@ Il campo `url` (facoltativo) deve iniziare con `https://`.
 - [x] Dockerfile ottimizzato + deploy su Kubernetes (k3d)
 - [x] Online su Render + GitHub Pages
 - [x] Stato online 🟢/🔴 via WebSocket + nevicata quando ci siamo tutti e due
-- [x] Calendario incontri con richiesta / accetta / rifiuta / modifica (PostgreSQL su Neon)
+- [x] Calendario incontri con richiesta / accetta / rifiuta / modifica (PostgreSQL)
 - [ ] Kubernetes con più repliche: Postgres condiviso + Redis pub/sub per la presenza

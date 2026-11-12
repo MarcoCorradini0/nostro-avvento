@@ -8,7 +8,9 @@ services:
     region: frankfurt            # il datacenter piu' vicino all'Italia (non si cambia dopo)
     dockerfilePath: ./Dockerfile
     healthCheckPath: /healthz    # Render controlla qui che l'app sia viva
-    autoDeployTrigger: checksPass # deploy solo se i test su GitHub sono verdi
+    # Deploy a ogni push su main. ("checksPass", cioe' aspettare i test di GitHub, non partiva.)
+    # Se il codice non compila la build su Render fallisce e resta online la versione precedente.
+    autoDeployTrigger: commit
     # Ricostruisce l'immagine solo se cambia qualcosa che ci finisce dentro.
     buildFilter:
       paths:
@@ -39,7 +41,8 @@ services:
         sync: false
       - key: USER2_KEY
         sync: false
-      # Database per gli incontri (Neon, piano free). Senza, gli incontri stanno in memoria
+      # Database per gli incontri (Postgres free di Render: dura 30 giorni, crealo verso il 28/11).
+      # Senza, o se il database e' scaduto, gli incontri stanno in memoria
       # e si perdono quando Render addormenta il servizio.
       # NB: su un servizio gia' creato Render non chiede i nuovi sync:false: va aggiunta a mano
       # in Environment.
