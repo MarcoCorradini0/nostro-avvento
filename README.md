@@ -34,25 +34,27 @@ Telefono ──► GitHub Pages (pagina web/, CDN, sempre accesa)
 - **Backend:** Kotlin 2.4 + Ktor 3 (motore CIO), kotlinx.serialization, slf4j-simple
 - **Frontend:** HTML/CSS/JS senza framework né build, mobile-first
 - **Build:** Gradle 9 (Kotlin DSL, configuration cache)
-- **Immagine:** Java ridotto con jlink + Class Data Sharing (CDS)
+- **Immagine:** Java 25 (LTS) ridotto con jlink + AOT cache, su Alpine 3.24
 - **CI/CD:** GitHub Actions (test, Pages) + deploy su Render tramite Deploy Hook quando i test sono verdi
 
 ### Avvio veloce
 
 Misurato con i limiti di Render Free (0.1 CPU, 512 MB):
 
-| | prima | dopo |
-|---|---|---|
-| Avvio della JVM fino a `/healthz` | ~23 s | **~6 s** |
-| RAM | 61 MB | **40 MB** |
-| Immagine | 318 MB | **164 MB** |
+| | all'inizio | Java 21 + CDS | Java 25 + AOT cache |
+|---|---|---|---|
+| Avvio fino a `/healthz` | ~23 s | ~7,5 s | **~5,9 s** |
+| RAM | 61 MB | 45 MB | **41 MB** |
+| Immagine | 318 MB | 177 MB | **163 MB** |
 
-Cosa fa la differenza: CIO al posto di Netty, logger minimale, jlink con solo 4 moduli,
-archivio CDS generato durante la build, `-XX:TieredStopAtLevel=1` e `-XX:+UseSerialGC`.
+Cosa fa la differenza: CIO al posto di Netty, logger minimale, jlink con solo 5 moduli,
+AOT cache di Java 25 generata durante la build (classi già caricate e collegate),
+`-XX:TieredStopAtLevel=1` e `-XX:+UseSerialGC`.
+Scansione vulnerabilità con Trivy (novembre 2026): 0 su sistema e librerie.
 
 ## Avvio in locale
 
-Requisiti: JDK 21+ (va bene anche quello incluso in IntelliJ).
+Requisiti: JDK 25+ (va bene anche quello incluso in IntelliJ).
 
 ```bash
 ./gradlew run
@@ -105,8 +107,8 @@ cp advent.example.json deploy/k8s/secrets/advent.json
 k3d cluster create avvento -p "8090:80@loadbalancer" --api-port 127.0.0.1:6550 --wait
 
 # 3. Build dell'immagine e import nel cluster (a ogni nuova versione)
-docker build -t avvento:0.3.1 .
-k3d image import avvento:0.3.1 -c avvento
+docker build -t avvento:0.3.2 .
+k3d image import avvento:0.3.2 -c avvento
 
 # 4. Deploy
 kubectl apply -k deploy/k8s
@@ -164,6 +166,7 @@ Il campo `url` (facoltativo) deve iniziare con `https://`.
 - Incontri: solo chi deve rispondere può accettare o rifiutare; date passate e testi oltre
   200 parole sono rifiutati dal server, non solo dalla pagina.
 - Il frontend usa sempre `textContent`, mai `innerHTML`: niente HTML iniettato.
+- Pagina con Content-Security-Policy e `no-referrer`; API con `nosniff`, `no-referrer` e `X-Frame-Options: DENY`.
 - Container non-root, filesystem in sola lettura su Kubernetes.
 
 ## Roadmap

@@ -10,6 +10,9 @@
   --radius: 14px;
 }
 
+/* "hidden" deve nascondere sempre, anche gli elementi con display: block/flex/grid. */
+[hidden] { display: none !important; }
+
 * { box-sizing: border-box; }
 
 html, body { margin: 0; }

@@ -79,4 +79,15 @@ class AdventTest {
         }
         assertEquals(HttpStatusCode.Forbidden, other.status)
     }
+
+    @Test
+    fun `ogni risposta ha gli header di sicurezza`() = testApplication {
+        application { module(Config.fromEnv(emptyMap()), calendar) }
+
+        for (res in listOf(client.get("/healthz"), client.get("/api/advent"))) {
+            assertEquals("nosniff", res.headers["X-Content-Type-Options"])
+            assertEquals("no-referrer", res.headers["Referrer-Policy"])
+            assertEquals("DENY", res.headers["X-Frame-Options"])
+        }
+    }
 }

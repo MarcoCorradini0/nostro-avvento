@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "dev.avvento"
-version = "0.3.1"
+version = "0.3.2"
 
 application {
     mainClass.set("dev.avvento.ApplicationKt")
@@ -34,12 +34,12 @@ dependencies {
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test")
 }
 
-// Compiliamo per Java 21: e' la versione che useremo nell'immagine Docker.
+// Compiliamo per Java 25: e' la versione che useremo nell'immagine Docker.
 java {
-    targetCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_25
 }
 kotlin {
-    compilerOptions { jvmTarget.set(JvmTarget.JVM_21) }
+    compilerOptions { jvmTarget.set(JvmTarget.JVM_25) }
 }
 
 tasks.test {

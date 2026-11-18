@@ -6,6 +6,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationCall
+import io.ktor.server.application.createApplicationPlugin
 import io.ktor.server.application.install
 import io.ktor.server.cio.CIO
 import io.ktor.server.engine.embeddedServer
@@ -57,6 +58,18 @@ data class ErrorResponse(val error: String)
 private val log = LoggerFactory.getLogger("avvento")
 
 /**
+ * Header di sicurezza su ogni risposta: il browser non "indovina" il tipo dei file,
+ * non manda l'indirizzo (con la chiave) ad altri siti e non mostra l'app dentro iframe altrui.
+ */
+private val SecurityHeaders = createApplicationPlugin("SecurityHeaders") {
+    onCall { call ->
+        call.response.header("X-Content-Type-Options", "nosniff")
+        call.response.header("Referrer-Policy", "no-referrer")
+        call.response.header("X-Frame-Options", "DENY")
+    }
+}
+
+/**
  * Senza DATABASE_URL gli incontri stanno in memoria (sviluppo); con Postgres sono salvati davvero.
  * Se il database non risponde (es. il Postgres free di Render e' scaduto) NON blocchiamo l'avvio:
  * il calendario dell'avvento deve funzionare comunque.
@@ -82,6 +95,7 @@ fun Application.module(
     val hub = PresenceHub()
     val meetings = MeetingService(store, users, today = config::today)
 
+    install(SecurityHeaders)
     install(ContentNegotiation) { json() }
     install(WebSockets) {
         pingPeriod = 25.seconds // tiene viva la connessione (e sveglio il server finche' la pagina e' aperta)

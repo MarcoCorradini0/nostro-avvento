@@ -6,6 +6,10 @@
   <meta name="theme-color" content="#0f1a2e">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="robots" content="noindex, nofollow">
+  <!-- Il link contiene la chiave (?k=...): non deve mai finire ad altri siti come "referrer". -->
+  <meta name="referrer" content="no-referrer">
+  <!-- Solo i nostri file e la nostra API: niente script o connessioni verso altri siti. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://nostro-avvento.onrender.com wss://nostro-avvento.onrender.com; manifest-src 'self'; base-uri 'none'; form-action 'none'">
   <title>Il nostro Avvento</title>
   <link rel="stylesheet" href="style.css">
 </head>
