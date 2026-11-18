@@ -35,7 +35,7 @@ Telefono ──► GitHub Pages (pagina web/, CDN, sempre accesa)
 - **Frontend:** HTML/CSS/JS senza framework né build, mobile-first
 - **Build:** Gradle 9 (Kotlin DSL, configuration cache)
 - **Immagine:** Java ridotto con jlink + Class Data Sharing (CDS)
-- **CI/CD:** GitHub Actions (test, Pages) + deploy automatico su Render a ogni push
+- **CI/CD:** GitHub Actions (test, Pages) + deploy su Render tramite Deploy Hook quando i test sono verdi
 
 ### Avvio veloce
 
@@ -83,11 +83,14 @@ Test:
 2. **GitHub:** *Settings → Pages → Source: GitHub Actions*, poi in
    *Settings → Secrets and variables → Actions → Variables* crea `API_BASE` con
    l'indirizzo del servizio Render (es. `https://nostro-avvento.onrender.com`).
+   Nella stessa pagina, in *Secrets*, crea `RENDER_DEPLOY_HOOK` con l'URL che trovi su
+   Render in *servizio → Settings → Deploy Hook*.
 3. I link da mandare: `https://marcocorradini0.github.io/nostro-avvento/?k=<chiave>`.
 
-Da lì in poi basta `git push`: i test girano su GitHub, Render ricostruisce l'API
-(solo se è cambiato qualcosa che finisce nell'immagine) e Pages aggiorna la pagina
-solo se è cambiato qualcosa in `web/`.
+Da lì in poi basta `git push`: i test girano su GitHub e, se sono verdi, il job `deploy`
+avvia il deploy su Render (solo se è cambiato qualcosa che finisce nell'immagine).
+Pages aggiorna la pagina solo se è cambiato qualcosa in `web/`.
+Render da solo non riceve i push (per questo `autoDeployTrigger` è `off`).
 
 ## Su Kubernetes in locale (k3d)
 
@@ -102,8 +105,8 @@ cp advent.example.json deploy/k8s/secrets/advent.json
 k3d cluster create avvento -p "8090:80@loadbalancer" --api-port 127.0.0.1:6550 --wait
 
 # 3. Build dell'immagine e import nel cluster (a ogni nuova versione)
-docker build -t avvento:0.3.0 .
-k3d image import avvento:0.3.0 -c avvento
+docker build -t avvento:0.3.1 .
+k3d image import avvento:0.3.1 -c avvento
 
 # 4. Deploy
 kubectl apply -k deploy/k8s

@@ -9,5 +9,5 @@ In questa cartella servono due file, ignorati da git:
    -join ((48..57)+(97..122) | Get-Random -Count 32 | ForEach-Object {[char]$_})
    ```
 
-2. `advent.json`: i contenuti veri delle 24 caselle
+2. `advent.json`: i contenuti veri delle 25 caselle (24 + Natale)
    (stesso formato di `advent.example.json` nella cartella principale).

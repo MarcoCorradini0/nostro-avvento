@@ -13,7 +13,7 @@ import java.sql.SQLException
 import java.util.Properties
 import java.util.concurrent.ConcurrentHashMap
 
-/** Dove salviamo gli incontri. Due versioni: in memoria (sviluppo/test) e PostgreSQL (Neon). */
+/** Dove salviamo gli incontri. Due versioni: in memoria (sviluppo/test) e PostgreSQL. */
 interface MeetingStore {
     suspend fun all(): List<Meeting>
     suspend fun get(id: String): Meeting?
@@ -42,7 +42,7 @@ class PostgresMeetingStore(databaseUrl: String) : MeetingStore {
     private val json = Json { ignoreUnknownKeys = true }
 
     init {
-        // Neon da' un indirizzo tipo postgresql://utente:password@host/db?sslmode=require
+        // Render da' un indirizzo tipo postgresql://utente:password@host/db (con ?sslmode=require da fuori)
         val uri = URI(databaseUrl)
         val (user, password) = uri.rawUserInfo.orEmpty().split(":", limit = 2).map { URLDecoder.decode(it, Charsets.UTF_8) } + listOf("", "")
         val params = uri.rawQuery.orEmpty().split("&").filter { it.isNotBlank() && !it.startsWith("channel_binding") }
@@ -96,7 +96,7 @@ class PostgresMeetingStore(databaseUrl: String) : MeetingStore {
     }
 
     /**
-     * Una sola connessione, riusata. Neon si addormenta dopo 5 minuti e chiude le connessioni:
+     * Una sola connessione, riusata. Se il database la chiude (riavvio, manutenzione, inattivita'):
      * se la query fallisce per questo, riapriamo la connessione e riproviamo una volta.
      */
     private suspend fun <T> sql(block: (Connection) -> T): T = withContext(Dispatchers.IO) {

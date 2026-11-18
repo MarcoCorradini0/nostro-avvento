@@ -8,20 +8,11 @@ services:
     region: frankfurt            # il datacenter piu' vicino all'Italia (non si cambia dopo)
     dockerfilePath: ./Dockerfile
     healthCheckPath: /healthz    # Render controlla qui che l'app sia viva
-    # Deploy a ogni push su main. ("checksPass", cioe' aspettare i test di GitHub, non partiva.)
-    # Se il codice non compila la build su Render fallisce e resta online la versione precedente.
-    autoDeployTrigger: commit
-    # Ricostruisce l'immagine solo se cambia qualcosa che ci finisce dentro.
-    buildFilter:
-      paths:
-        - src/**
-        - web/**
-        - gradle/**
-        - build.gradle.kts
-        - settings.gradle.kts
-        - gradle.properties
-        - Dockerfile
-        - advent.example.json
+    # Render non riceve i push da GitHub, quindi il deploy lo avvia la CI
+    # (job "deploy" in .github/workflows/ci.yml, tramite Deploy Hook) quando i test sono verdi.
+    # "off" evita due deploy se un giorno Render ricominciasse a ricevere gli eventi.
+    # Quali file fanno partire il deploy lo decide il job "deploy" (paths-filter in ci.yml).
+    autoDeployTrigger: "off"
     envVars:
       - key: TIMEZONE
         value: Europe/Rome

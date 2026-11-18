@@ -261,8 +261,20 @@ document.addEventListener("visibilitychange", () => {
   } else {
     connect();
     refreshMeetings();
+    refreshAdvent();
   }
 });
+
+// Se la pagina e' rimasta aperta in background fino al giorno dopo, apriamo le caselle nuove.
+async function refreshAdvent() {
+  try {
+    const advent = await api("/api/advent");
+    if (advent.today === state.today) return;
+    state.today = advent.today;
+    renderAdvent(advent);
+    renderMeetings(); // "passato / prossimo" dipende dalla data di oggi
+  } catch (_) { /* riproveremo al prossimo ritorno sulla pagina */ }
+}
 
 function bothOnline() {
   const on = state.presence.online;

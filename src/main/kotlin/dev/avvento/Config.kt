@@ -20,7 +20,7 @@ data class Config(
     val allowedOrigins: List<String>,
     /** Cartella con la pagina web, servita solo se esiste (sviluppo locale). */
     val webDir: String,
-    /** PostgreSQL per gli incontri (es. Neon). Null = in memoria. */
+    /** PostgreSQL per gli incontri (Postgres di Render). Null = in memoria. */
     val databaseUrl: String?,
 ) {
     companion object {
