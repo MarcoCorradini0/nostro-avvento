@@ -107,8 +107,8 @@ cp advent.example.json deploy/k8s/secrets/advent.json
 k3d cluster create avvento -p "8090:80@loadbalancer" --api-port 127.0.0.1:6550 --wait
 
 # 3. Build dell'immagine e import nel cluster (a ogni nuova versione)
-docker build -t avvento:0.3.2 .
-k3d image import avvento:0.3.2 -c avvento
+docker build -t avvento:0.3.3 .
+k3d image import avvento:0.3.3 -c avvento
 
 # 4. Deploy
 kubectl apply -k deploy/k8s
@@ -155,6 +155,7 @@ non finiscono su GitHub) e avvia con `ADVENT_FILE=advent.json`.
 
 Tipi di casella: `text` 💌, `song` 🎵, `voucher` 🎟️, `question` ❓, `movie` 🎬, `recipe` 🍪, `christmas` 🎄.
 Il campo `url` (facoltativo) deve iniziare con `https://`.
+Il campo `anim` (facoltativo) aggiunge un'animazione al popup: `hearts`, `beat`, `plane`, `kiss`, `together`.
 
 ## Sicurezza e privacy
 

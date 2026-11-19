@@ -126,6 +126,7 @@ const ORDER = [7, 15, 1, 22, 11, 4, 18, 24, 9, 2, 13, 20, 5, 16, 23, 10, 3, 19, 
 const BIG = new Set([24, 13, 1, 19]);
 const CHRISTMAS = 25;
 const ICONS = { text: "💌", song: "🎵", voucher: "🎟️", question: "❓", movie: "🎬", recipe: "🍪", christmas: "🎄" };
+const LINK_LABELS = { song: "Ascolta 🎵", christmas: "Ascolta 🎵", movie: "Scopri il film 🎬", recipe: "Guarda la ricetta 🍳" };
 
 function openedSet() {
   try { return new Set(JSON.parse(localStorage.getItem(OPENED_STORAGE) || "[]")); }
@@ -195,6 +196,8 @@ function openDoor(door, btn) {
   const c = door.content;
   $("dlg-day").textContent = door.day + " dicembre";
   $("dlg-icon").textContent = (c && ICONS[c.type]) || "🎁";
+  const hasAnim = renderAnim(c && c.anim);
+  $("dlg-icon").hidden = hasAnim;
   // textContent (mai innerHTML): il testo viene mostrato cosi' com'e', nessun codice iniettato
   $("dlg-title").textContent = (c && c.title) || "Sorpresa in arrivo...";
   $("dlg-text").textContent = (c && c.text) || "Questa casella e' ancora vuota, ci sto lavorando 😅";
@@ -202,7 +205,7 @@ function openDoor(door, btn) {
   const link = $("dlg-link");
   if (c && c.url && c.url.startsWith("https://")) {
     link.href = c.url;
-    link.textContent = c.type === "song" ? "Ascolta 🎵" : "Apri 🔗";
+    link.textContent = LINK_LABELS[c.type] || "Apri 🔗";
     link.hidden = false;
   } else {
     link.hidden = true;
@@ -213,6 +216,57 @@ function openDoor(door, btn) {
   btn.classList.remove("ready");
   btn.classList.add("opened");
   if (door.day === CHRISTMAS) { state.christmas = true; updateSnow(); }
+}
+
+// ---- Animazioni del popup (solo CSS + emoji: niente GIF esterne, niente innerHTML) ----
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text) e.textContent = text;
+  return e;
+}
+
+const ANIMS = {
+  // I nostri colori: 💙 Marco, 💜 Esther
+  // un cuore che batte
+  beat: box => box.append(el("span", "a-beat", "💜")),
+  // cuori che salgono da sotto
+  hearts: box => {
+    const kinds = ["💙", "💜"];
+    for (let i = 0; i < 14; i++) {
+      const h = el("span", "a-float", kinds[i % kinds.length]);
+      h.style.setProperty("--x", (5 + Math.random() * 90).toFixed(0) + "%");
+      h.style.setProperty("--d", (Math.random() * 3).toFixed(2) + "s");
+      h.style.setProperty("--t", (2.6 + Math.random() * 1.8).toFixed(2) + "s");
+      h.style.setProperty("--s", (0.9 + Math.random() * 0.9).toFixed(2) + "rem");
+      box.append(h);
+    }
+  },
+  // l'aereo che va dall'Italia al Peru'
+  plane: box => {
+    const from = el("span", "a-place"); from.append(el("b", null, "🇮🇹"), el("small", null, "Italia"));
+    const to = el("span", "a-place"); to.append(el("b", null, "🇵🇪"), el("small", null, "Perú"));
+    const sky = el("span", "a-sky");
+    sky.append(el("span", "a-plane", "✈️"), el("span", "a-arrive", "💜"));
+    box.append(from, sky, to);
+  },
+  // un bacio con i cuoricini che volano via
+  kiss: box => {
+    box.append(el("span", "a-kiss", "💋"));
+    ["💜", "💙", "💜"].forEach((h, i) => box.append(el("span", "a-pop a-pop" + i, h)));
+  },
+  // due cuori lontani (il mio e il tuo) che si avvicinano
+  together: box => box.append(el("span", "a-left", "💙"), el("span", "a-right", "💜"), el("span", "a-merge", "💙💜")),
+};
+
+function renderAnim(kind) {
+  const box = $("dlg-anim");
+  box.replaceChildren();
+  const draw = ANIMS[kind];
+  box.className = "anim" + (draw ? " anim-" + kind : "");
+  box.hidden = !draw;
+  if (draw) draw(box);
+  return Boolean(draw);
 }
 
 $("dlg-close").addEventListener("click", () => $("door-dialog").close());

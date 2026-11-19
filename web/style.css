@@ -124,6 +124,41 @@ dialog article { padding: 28px 22px 20px; text-align: center; }
 dialog h2 { font-family: Georgia, serif; font-weight: 400; margin: 0 0 10px; }
 .dlg-text { white-space: pre-line; line-height: 1.5; }
 
+/* ---- Animazioni del popup -------------------------------------------------- */
+.anim { position: relative; height: 96px; margin: 4px 0 8px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.anim span { line-height: 1; }
+
+.a-beat { font-size: 3.6rem; animation: beat 1.1s ease-in-out infinite; }
+@keyframes beat { 15% { transform: scale(1.25); } 30% { transform: scale(1); } 45% { transform: scale(1.18); } 60%, 100% { transform: scale(1); } }
+
+.a-float { position: absolute; bottom: -24px; left: var(--x); font-size: var(--s); opacity: 0; animation: float var(--t) ease-in var(--d) infinite; }
+@keyframes float { 10% { opacity: 1; } 100% { transform: translate(-50%, -130px) rotate(20deg); opacity: 0; } }
+
+.anim-plane { justify-content: space-between; }
+.a-place { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 52px; }
+.a-place b { font-size: 1.8rem; font-weight: 400; }
+.a-place small { font-size: .7rem; color: #777; }
+.a-sky { position: relative; flex: 1; height: 40px; border-bottom: 2px dashed #e0b9b5; margin: 0 4px 18px; }
+.a-plane { position: absolute; left: 0; bottom: -12px; font-size: 1.6rem; animation: fly 4s ease-in-out infinite; }
+.a-arrive { position: absolute; right: -6px; bottom: 10px; font-size: 1.3rem; opacity: 0; animation: arrive 4s ease-out infinite; }
+@keyframes fly { 0% { left: 0; transform: translateY(0); opacity: 0; } 8% { opacity: 1; } 50% { transform: translateY(-16px); } 80% { left: calc(100% - 28px); transform: translateY(0); opacity: 1; } 90%, 100% { left: calc(100% - 28px); opacity: 0; } }
+@keyframes arrive { 0%, 78% { opacity: 0; transform: scale(.3); } 88% { opacity: 1; transform: scale(1.3); } 100% { opacity: 0; transform: translateY(-20px) scale(1); } }
+
+.a-kiss { font-size: 3.4rem; animation: kiss 2s ease-in-out infinite; }
+@keyframes kiss { 0%, 100% { transform: scale(1) rotate(-6deg); } 20% { transform: scale(1.3) rotate(6deg); } 35% { transform: scale(1) rotate(-6deg); } }
+.a-pop { position: absolute; font-size: 1.1rem; opacity: 0; animation: pop-out 2s ease-out infinite; }
+.a-pop1 { animation-delay: .15s; } .a-pop2 { animation-delay: .3s; }
+.a-pop0 { --px: -60px; --py: -30px; } .a-pop1 { --px: 0; --py: -42px; } .a-pop2 { --px: 60px; --py: -30px; }
+@keyframes pop-out { 0%, 18% { opacity: 0; transform: translate(0, 0) scale(.4); } 30% { opacity: 1; } 70%, 100% { opacity: 0; transform: translate(var(--px), var(--py)) scale(1.1); } }
+
+.a-left, .a-right, .a-merge { position: absolute; font-size: 2.6rem; }
+.a-left { animation: from-left 3.2s ease-in-out infinite; }
+.a-right { animation: from-right 3.2s ease-in-out infinite; }
+.a-merge { font-size: 2.9rem; letter-spacing: -.35em; opacity: 0; animation: merge 3.2s ease-in-out infinite; }
+@keyframes from-left { 0% { transform: translateX(-120px); opacity: 1; } 50% { transform: translateX(-14px); opacity: 1; } 58%, 100% { transform: translateX(0); opacity: 0; } }
+@keyframes from-right { 0% { transform: translateX(120px); opacity: 1; } 50% { transform: translateX(14px); opacity: 1; } 58%, 100% { transform: translateX(0); opacity: 0; } }
+@keyframes merge { 0%, 50% { opacity: 0; transform: scale(.5); } 62% { opacity: 1; transform: scale(1.25); } 72%, 90% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1); } }
+
 .btn {
   display: block;
   width: 100%;
@@ -221,4 +256,7 @@ dialog h2 { font-family: Georgia, serif; font-weight: 400; margin: 0 0 10px; }
 
 @media (prefers-reduced-motion: reduce) {
   .door.ready, .door.shake, .door.christmas, dialog[open] article, .loader-icon, .dots span { animation: none; }
+  .anim span { animation: none !important; }
+  .a-float, .a-pop, .a-arrive, .a-left, .a-right { display: none; }
+  .a-merge { opacity: 1; }
 }

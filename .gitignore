@@ -11,3 +11,6 @@ deploy/k8s/secrets/keys.env
 
 # Chiavi vere per Render e link personali
 *.local.txt
+
+# Biglietto con il QR (contiene la chiave)
+*.local.html

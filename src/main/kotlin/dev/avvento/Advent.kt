@@ -14,6 +14,8 @@ data class AdventEntry(
     val title: String,
     val text: String = "",
     val url: String? = null,
+    /** Animazione facoltativa nel popup: una di [ANIMATIONS]. */
+    val anim: String? = null,
 )
 
 /** Cosa mandiamo al browser: il contenuto c'e' SOLO se la casella e' sbloccata. */
@@ -51,6 +53,9 @@ class AdventCalendar(
     companion object {
         /** 24 caselle dell'avvento + la 25 speciale di Natale. */
         const val LAST_DAY = 25
+
+        /** Le animazioni che la pagina sa disegnare (vedi web/app.js). */
+        val ANIMATIONS = setOf("hearts", "beat", "plane", "kiss", "together")
         private val json = Json { ignoreUnknownKeys = true }
 
         fun load(path: String, year: Int): AdventCalendar {
@@ -58,6 +63,9 @@ class AdventCalendar(
             require(file.exists()) { "File dell'avvento non trovato: ${file.absolutePath}" }
             val list = json.decodeFromString<List<AdventEntry>>(file.readText())
             require(list.all { it.day in 1..LAST_DAY }) { "Ogni casella deve avere day tra 1 e $LAST_DAY" }
+            list.firstOrNull { it.anim != null && it.anim !in ANIMATIONS }?.let {
+                error("Casella ${it.day}: anim '${it.anim}' sconosciuta, usa una tra $ANIMATIONS")
+            }
             return AdventCalendar(list.associateBy { it.day }, year)
         }
     }
