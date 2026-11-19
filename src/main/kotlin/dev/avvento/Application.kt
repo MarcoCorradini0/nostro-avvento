@@ -76,7 +76,7 @@ private val SecurityHeaders = createApplicationPlugin("SecurityHeaders") {
  */
 fun createMeetingStore(config: Config): MeetingStore {
     val url = config.databaseUrl ?: return InMemoryMeetingStore().also {
-        log.warn("DATABASE_URL non impostata: gli incontri restano in memoria e si perdono al riavvio")
+        log.info("Incontri in memoria (DATABASE_URL non impostata)")
     }
     return try {
         PostgresMeetingStore(url).also { runBlocking { it.init() } }

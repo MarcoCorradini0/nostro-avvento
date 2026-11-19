@@ -45,8 +45,9 @@ ENV JAVA_TOOL_OPTIONS="-XX:TieredStopAtLevel=1 -XX:+UseSerialGC -XX:MaxRAMPercen
 # a ogni avvio vero le legge da li' invece di rifare tutto da zero.
 # -XX:MaxRAM=512m: la macchina di build di Render ha tanta RAM; senza questo Java
 # disattiverebbe i "compressed oops" e la cache non sarebbe usabile con i 512 MB veri.
-RUN ADVENT_FILE=advent.example.json java -XX:AOTCacheOutput=app.aot -XX:MaxRAM=512m -jar app.jar & pid=$!; \
-    until wget -q -O /dev/null --header "X-Key: dev-chiave-1" http://127.0.0.1:8080/api/advent; do sleep 0.5; done; \
+# -Xlog:aot=error: nel log di build solo gli errori veri, non gli avvisi sulle classi saltate.
+RUN ADVENT_FILE=advent.example.json java -XX:AOTCacheOutput=app.aot -XX:MaxRAM=512m -Xlog:aot=error -jar app.jar & pid=$!; \
+    until wget -q -O /dev/null --header "X-Key: dev-chiave-1" http://127.0.0.1:8080/api/advent 2>/dev/null; do sleep 0.5; done; \
     wget -q -O /dev/null --header "X-Key: dev-chiave-1" http://127.0.0.1:8080/api/me; \
     wget -q -O /dev/null --header "X-Key: dev-chiave-1" http://127.0.0.1:8080/api/meetings; \
     wget -q -O /dev/null http://127.0.0.1:8080/healthz; \
