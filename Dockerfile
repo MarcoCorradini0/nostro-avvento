@@ -43,7 +43,9 @@ ENV JAVA_TOOL_OPTIONS="-XX:TieredStopAtLevel=1 -XX:+UseSerialGC -XX:MaxRAMPercen
 # AOT cache (Java 25): avviamo l'app una volta durante la build e le facciamo servire
 # le richieste tipiche. Java salva in app.aot le classi gia' caricate e collegate:
 # a ogni avvio vero le legge da li' invece di rifare tutto da zero.
-RUN ADVENT_FILE=advent.example.json java -XX:AOTCacheOutput=app.aot -jar app.jar & pid=$!; \
+# -XX:MaxRAM=512m: la macchina di build di Render ha tanta RAM; senza questo Java
+# disattiverebbe i "compressed oops" e la cache non sarebbe usabile con i 512 MB veri.
+RUN ADVENT_FILE=advent.example.json java -XX:AOTCacheOutput=app.aot -XX:MaxRAM=512m -jar app.jar & pid=$!; \
     until wget -q -O /dev/null --header "X-Key: dev-chiave-1" http://127.0.0.1:8080/api/advent; do sleep 0.5; done; \
     wget -q -O /dev/null --header "X-Key: dev-chiave-1" http://127.0.0.1:8080/api/me; \
     wget -q -O /dev/null --header "X-Key: dev-chiave-1" http://127.0.0.1:8080/api/meetings; \
