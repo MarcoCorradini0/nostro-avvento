@@ -5,9 +5,9 @@
 Una piccola web app mobile-first per due persone lontane:
 
 - 🎄 **Calendario dell'avvento** con una sorpresa al giorno (e una casella segreta per Natale)
-- 🟢 **Chi è online** in tempo reale, con "vista 5 min fa"
-- ❄️ **Nevicata insieme**: quando siete online tutti e due, nevica più forte
-- 📅 **Incontri**: proponi un giorno con una descrizione (max 200 parole); l'altra persona
+- 🟢 **Chi è online** in tempo reale, con "vista 5 min fa" (si resta online 3 minuti anche cambiando app)
+- ❄️ **Nevicata insieme**: quando siete online tutti e due nevica più forte e cadono cuori 💙💜
+- 📅 **Incontri**: proponi un giorno (e, se vuoi, un orario) con una descrizione (max 200 parole); l'altra persona
   accetta, rifiuta o propone una modifica, e riceve l'avviso in tempo reale
 
 Progetto personale per imparare **Kotlin** (backend Ktor) e **Kubernetes**.
@@ -107,8 +107,8 @@ cp advent.example.json deploy/k8s/secrets/advent.json
 k3d cluster create avvento -p "8090:80@loadbalancer" --api-port 127.0.0.1:6550 --wait
 
 # 3. Build dell'immagine e import nel cluster (a ogni nuova versione)
-docker build -t avvento:0.3.3 .
-k3d image import avvento:0.3.3 -c avvento
+docker build -t avvento:0.3.4 .
+k3d image import avvento:0.3.4 -c avvento
 
 # 4. Deploy
 kubectl apply -k deploy/k8s

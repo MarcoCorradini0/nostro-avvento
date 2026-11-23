@@ -278,6 +278,9 @@ $("door-dialog").addEventListener("click", e => { if (e.target === $("door-dialo
 let ws = null;
 let wsRetry = 0;
 let wsTimer = null;
+let hideTimer = null;
+// Se cambi scheda o app per poco (es. rispondi a un messaggio) resti online ancora 3 minuti.
+const HIDDEN_GRACE_MS = 3 * 60 * 1000;
 
 function wsUrl() {
   const base = API || location.origin;
@@ -285,7 +288,7 @@ function wsUrl() {
 }
 
 function connect() {
-  if (ws || document.hidden || !state.me) return;
+  if (ws || !state.me) return;
   clearTimeout(wsTimer);
   const socket = new WebSocket(wsUrl());
   ws = socket;
@@ -306,13 +309,18 @@ function connect() {
   };
 }
 
-// Quando lei chiude l'app o cambia scheda, risulta offline. Quando torna, ci riconnettiamo.
+// Quando lei chiude l'app o resta su un'altra scheda per piu' di 3 minuti risulta offline.
+// Quando torna, ci riconnettiamo.
 document.addEventListener("visibilitychange", () => {
   if (!state.me) return;
   if (document.hidden) {
-    clearTimeout(wsTimer);
-    if (ws) { const s = ws; ws = null; s.close(1000); }
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(() => {
+      clearTimeout(wsTimer);
+      if (ws) { const s = ws; ws = null; s.close(1000); }
+    }, HIDDEN_GRACE_MS);
   } else {
+    clearTimeout(hideTimer);
     connect();
     refreshMeetings();
     refreshAdvent();
@@ -357,8 +365,12 @@ function renderPresence() {
   box.hidden = false;
 
   const together = bothOnline();
-  if (together && !state.together) toast("❄️ Siete online insieme: nevica!", 3500);
+  if (together && !state.together) {
+    toast("💙 Siete online insieme 💜", 3500);
+    heartBurst();
+  }
   state.together = together;
+  $("together").hidden = !together;
   updateSnow();
 }
 
@@ -393,8 +405,13 @@ async function refreshMeetings() {
   } catch (_) { /* riproveremo al prossimo avviso */ }
 }
 
+// "il 10 gennaio" oppure "il 10 gennaio alle 20:30"
+function when(date, time) {
+  return "il " + fmtShort.format(parseDay(date)) + (time ? " alle " + time : "");
+}
+
 function onMeetingNotice(msg) {
-  const text = NOTICE[msg.kind](state.names[msg.by], "il " + fmtShort.format(parseDay(msg.date)));
+  const text = NOTICE[msg.kind](state.names[msg.by], when(msg.date, msg.time));
   toast(text, 5000);
   refreshMeetings();
 }
@@ -433,7 +450,7 @@ function meetingCard(m) {
   head.className = "m-head";
   const date = document.createElement("span");
   date.className = "m-date";
-  date.textContent = fmtLong.format(parseDay(m.date));
+  date.textContent = fmtLong.format(parseDay(m.date)) + (m.time ? " · " + m.time : "");
   const chip = document.createElement("span");
   chip.className = "chip";
   chip.textContent =
@@ -461,7 +478,7 @@ function meetingCard(m) {
   for (const ev of m.events) {
     const li = document.createElement("li");
     let line = `${state.names[ev.by]} ${KIND_TEXT[ev.kind]}`;
-    if (ev.date) line += ` (${fmtShort.format(parseDay(ev.date))})`;
+    if (ev.date) line += ` (${fmtShort.format(parseDay(ev.date))}${ev.time ? " " + ev.time : ""})`;
     li.textContent = `${fmtWhen.format(new Date(ev.at))} — ${line}`;
     ul.appendChild(li);
   }
@@ -519,6 +536,7 @@ function openMeetingForm(meeting) {
   $("mf-title").textContent = editing ? "Proponi una modifica" : "Proponi un giorno";
   $("mf-date").min = state.today;
   $("mf-date").value = editing ? editing.date : "";
+  $("mf-time").value = editing && editing.time ? editing.time : "";
   $("mf-text").value = editing ? editing.text : "";
   updateCounter();
   $("meeting-dialog").showModal();
@@ -529,7 +547,7 @@ $("mf-cancel").addEventListener("click", () => $("meeting-dialog").close());
 $("new-meeting").addEventListener("click", () => openMeetingForm(null));
 $("meeting-form").addEventListener("submit", async e => {
   e.preventDefault();
-  const body = { date: $("mf-date").value, text: $("mf-text").value.trim() };
+  const body = { date: $("mf-date").value, time: $("mf-time").value || null, text: $("mf-text").value.trim() };
   if (!body.date) return;
   $("mf-send").disabled = true;
   try {
@@ -560,7 +578,7 @@ for (const b of $("tabs").querySelectorAll("button")) b.addEventListener("click"
 // Neve
 // =============================================================================
 // Una sola animazione; setSnow(n) cambia quanti fiocchi ci sono.
-const snow = { flakes: [], running: false, w: 0, h: 0 };
+const snow = { flakes: [], hearts: [], running: false, w: 0, h: 0 };
 const dpr = window.devicePixelRatio || 1;
 
 function newFlake(randomY) {
@@ -573,7 +591,12 @@ function newFlake(randomY) {
   };
 }
 
-function setSnow(count) {
+let heartN = 0;
+function newHeart(randomY) {
+  return { ...newFlake(randomY), y: randomY ? Math.random() * snow.h : -20, emoji: heartN++ % 2 ? "💜" : "💙" };
+}
+
+function setSnow(count, hearts = 0) {
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   const canvas = $("snow");
 
@@ -600,24 +623,70 @@ function setSnow(count) {
         ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
       }
       ctx.fill();
+      // Quando siete online insieme cadono anche cuori: 💙 il mio, 💜 il tuo
+      ctx.font = 14 * dpr + "px sans-serif";
+      for (const h of snow.hearts) {
+        h.y += h.speed * dpr;
+        h.phase += 0.02;
+        h.x += Math.sin(h.phase) * 0.5 * dpr;
+        if (h.y > snow.h + 20) Object.assign(h, newHeart(false));
+        ctx.fillText(h.emoji, h.x, h.y);
+      }
       requestAnimationFrame(frame);
     })();
   }
 
   while (snow.flakes.length < count) snow.flakes.push(newFlake(true));
   snow.flakes.length = count;
+  while (snow.hearts.length < hearts) snow.hearts.push(newHeart(false));
+  snow.hearts.length = hearts;
 }
 
-// Neve leggera da soli, forte quando siete online insieme, fortissima a Natale.
+// Una pioggia di cuori quando vi trovate online insieme
+function heartBurst() {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const box = document.createElement("div");
+  box.className = "burst";
+  box.setAttribute("aria-hidden", "true");
+  for (let i = 0; i < 24; i++) {
+    const h = el("span", "a-float", i % 2 ? "💜" : "💙");
+    h.style.setProperty("--x", (3 + Math.random() * 94).toFixed(0) + "%");
+    h.style.setProperty("--d", (Math.random() * 1.2).toFixed(2) + "s");
+    h.style.setProperty("--t", (2.2 + Math.random() * 1.5).toFixed(2) + "s");
+    h.style.setProperty("--s", (1.2 + Math.random() * 1.4).toFixed(2) + "rem");
+    box.append(h);
+  }
+  document.body.append(box);
+  setTimeout(() => box.remove(), 5200);
+}
+
+// Neve leggera da soli, forte quando siete online insieme (con i cuori), fortissima a Natale.
 function updateSnow() {
-  setSnow(state.christmas ? 160 : bothOnline() ? 120 : 40);
+  setSnow(state.christmas ? 160 : bothOnline() ? 120 : 40, bothOnline() ? 26 : 0);
 }
 
 // =============================================================================
 // Avvio
 // =============================================================================
+// Schermata iniziale: almeno 1,8 s, poi sfuma (se il server dorme, dopo 4 s lascia il posto al loader).
+const SPLASH_MIN_MS = 1800;
+const SPLASH_MAX_MS = 4000;
+const splashStart = Date.now();
+let splashGone = false;
+async function hideSplash() {
+  if (splashGone) return;
+  splashGone = true;
+  await sleep(Math.max(0, SPLASH_MIN_MS - (Date.now() - splashStart)));
+  $("splash").classList.add("out");
+  setTimeout(() => $("splash").remove(), 700);
+}
+setTimeout(hideSplash, SPLASH_MAX_MS);
+
+const HEART = { u1: "💙", u2: "💜" };
+
 async function init() {
   if (!key) {
+    hideSplash();
     showError("Per entrare apri il link personale che hai ricevuto 💌");
     return;
   }
@@ -627,11 +696,14 @@ async function init() {
     // Le tre chiamate partono insieme: meno attesa.
     const [me, advent, meetings] = await Promise.all([api("/api/me"), api("/api/advent"), api("/api/meetings")]);
     stopLoader();
+    const heart = HEART[me.id] || "💜";
+    $("splash-sub").textContent = "Hola, " + me.name + " " + heart;
+    hideSplash();
     state.me = me;
     state.names = { [me.id]: me.name, [me.otherId]: me.otherName };
     state.today = advent.today;
     state.meetings = meetings.meetings;
-    $("greeting").textContent = "Ciao " + me.name + " ❄️";
+    $("greeting").textContent = "Ciao " + me.name + " " + heart;
     renderAdvent(advent);
     renderMeetings();
     $("tabs").hidden = false;
@@ -641,6 +713,7 @@ async function init() {
     connect();
   } catch (e) {
     stopLoader();
+    hideSplash();
     showError(e.message === "unauthorized"
       ? "Questo link non e' valido 🤔"
       : "Non riesco a collegarmi, riprova tra poco.");

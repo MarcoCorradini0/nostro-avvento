@@ -6,6 +6,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.Serializable
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.format.DateTimeParseException
 import java.util.UUID
 
@@ -23,6 +24,8 @@ data class MeetingEvent(
     val kind: EventKind,
     val date: String? = null,
     val text: String? = null,
+    /** Orario facoltativo "HH:mm". */
+    val time: String? = null,
 )
 
 @Serializable
@@ -35,10 +38,12 @@ data class Meeting(
     val waitingFor: String?,
     val createdBy: String,
     val events: List<MeetingEvent>,
+    /** Orario facoltativo "HH:mm" (null = solo il giorno). */
+    val time: String? = null,
 )
 
 @Serializable
-data class MeetingRequest(val date: String, val text: String = "")
+data class MeetingRequest(val date: String, val text: String = "", val time: String? = null)
 
 class MeetingException(val status: HttpStatusCode, message: String) : Exception(message)
 
@@ -59,16 +64,17 @@ class MeetingService(
     suspend fun list(): List<Meeting> = store.all().sortedWith(compareBy({ it.date }, { it.id }))
 
     suspend fun propose(user: User, req: MeetingRequest): Meeting = mutex.withLock {
-        val date = validate(req)
+        val (date, time) = validate(req)
         if (store.count() >= MAX_MEETINGS) throw MeetingException(HttpStatusCode.Conflict, "Troppi incontri salvati")
         val meeting = Meeting(
             id = UUID.randomUUID().toString(),
             date = date.toString(),
+            time = time,
             text = req.text.trim(),
             status = MeetingStatus.PENDING,
             waitingFor = otherId(user),
             createdBy = user.id,
-            events = listOf(event(user, EventKind.PROPOSED, date.toString(), req.text.trim())),
+            events = listOf(event(user, EventKind.PROPOSED, date.toString(), req.text.trim(), time)),
         )
         store.save(meeting)
         meeting
@@ -83,13 +89,14 @@ class MeetingService(
         if (m.status != MeetingStatus.PENDING && m.status != MeetingStatus.ACCEPTED) {
             throw MeetingException(HttpStatusCode.Conflict, "Questo incontro non si puo' piu' modificare")
         }
-        val date = validate(req)
+        val (date, time) = validate(req)
         val updated = m.copy(
             date = date.toString(),
+            time = time,
             text = req.text.trim(),
             status = MeetingStatus.PENDING,
             waitingFor = otherId(user),
-            events = m.events + event(user, EventKind.MODIFIED, date.toString(), req.text.trim()),
+            events = m.events + event(user, EventKind.MODIFIED, date.toString(), req.text.trim(), time),
         )
         store.save(updated)
         updated
@@ -125,10 +132,11 @@ class MeetingService(
     private fun otherId(user: User): String =
         users.other(user)?.id ?: throw MeetingException(HttpStatusCode.Conflict, "Manca l'altra persona")
 
-    private fun event(user: User, kind: EventKind, date: String? = null, text: String? = null) =
-        MeetingEvent(at = now().toString(), by = user.id, kind = kind, date = date, text = text)
+    private fun event(user: User, kind: EventKind, date: String? = null, text: String? = null, time: String? = null) =
+        MeetingEvent(at = now().toString(), by = user.id, kind = kind, date = date, text = text, time = time)
 
-    private fun validate(req: MeetingRequest): LocalDate {
+    /** Controlla la richiesta e restituisce giorno e orario (normalizzato "HH:mm", o null). */
+    private fun validate(req: MeetingRequest): Pair<LocalDate, String?> {
         val date = try {
             LocalDate.parse(req.date)
         } catch (_: DateTimeParseException) {
@@ -140,7 +148,14 @@ class MeetingService(
         if (req.text.length > MAX_CHARS || wordCount(req.text) > MAX_WORDS) {
             throw MeetingException(HttpStatusCode.BadRequest, "Massimo $MAX_WORDS parole")
         }
-        return date
+        val time = req.time?.takeIf { it.isNotBlank() }?.let {
+            try {
+                LocalTime.parse(it.trim()).withSecond(0).withNano(0).toString()
+            } catch (_: DateTimeParseException) {
+                throw MeetingException(HttpStatusCode.BadRequest, "Orario non valido")
+            }
+        }
+        return date to time
     }
 
     companion object {

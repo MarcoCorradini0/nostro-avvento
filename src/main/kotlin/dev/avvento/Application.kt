@@ -173,7 +173,7 @@ private fun Route.meetingRoutes(users: UserDirectory, meetings: MeetingService, 
             val meeting = action(me)
             respond(meeting)
             val last = meeting.events.last()
-            users.other(me)?.let { hub.sendTo(it.id, MeetingNotice(meeting.id, me.id, last.kind, meeting.date)) }
+            users.other(me)?.let { hub.sendTo(it.id, MeetingNotice(meeting.id, me.id, last.kind, meeting.date, meeting.time)) }
         } catch (e: MeetingException) {
             respond(e.status, ErrorResponse(e.message ?: "Errore"))
         } catch (e: BadRequestException) {

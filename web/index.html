@@ -16,10 +16,18 @@
 <body>
   <canvas id="snow" aria-hidden="true"></canvas>
 
+  <!-- Schermata iniziale: un paio di secondi, poi sfuma -->
+  <div id="splash" class="splash" aria-hidden="true">
+    <div class="splash-hearts"><span class="s-left">💙</span><span class="s-right">💜</span></div>
+    <p class="splash-title">Il nostro Avvento</p>
+    <p id="splash-sub" class="splash-sub">&nbsp;</p>
+  </div>
+
   <header>
     <h1>Il nostro Avvento</h1>
     <p id="greeting" class="sub">&nbsp;</p>
     <div id="presence" class="presence" hidden aria-live="polite"></div>
+    <p id="together" class="together" hidden>💙 Siete qui insieme 💜</p>
   </header>
 
   <main>
@@ -60,9 +68,14 @@
   <dialog id="meeting-dialog">
     <form id="meeting-form" method="dialog">
       <h2 id="mf-title">Proponi un giorno</h2>
-      <label>Quando
-        <input id="mf-date" type="date" required>
-      </label>
+      <div class="mf-when">
+        <label><span>Giorno</span>
+          <input id="mf-date" type="date" required>
+        </label>
+        <label><span>Ora <small>(facoltativa)</small></span>
+          <input id="mf-time" type="time" step="900">
+        </label>
+      </div>
       <label>Cosa facciamo?
         <textarea id="mf-text" rows="6" placeholder="Idee, posti, orari… (max 200 parole)"></textarea>
       </label>

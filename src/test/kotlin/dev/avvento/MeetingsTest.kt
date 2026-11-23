@@ -39,6 +39,16 @@ class MeetingsTest {
     }
 
     @Test
+    fun `l'orario e' facoltativo e viene controllato`() = runTest {
+        val s = service()
+        assertNull(s.propose(marco, MeetingRequest("2026-12-20")).time)
+        val m = s.propose(marco, MeetingRequest("2026-12-20", "Cena", time = "20:30"))
+        assertEquals("20:30", m.time)
+        assertEquals("21:00", s.modify(lei, m.id, MeetingRequest("2026-12-20", "Un po' piu' tardi", time = "21:00")).time)
+        assertEquals(HttpStatusCode.BadRequest, assertFailsWith<MeetingException> { s.propose(marco, MeetingRequest("2026-12-20", time = "25:99")) }.status)
+    }
+
+    @Test
     fun `non puoi accettare la tua stessa proposta`() = runTest {
         val s = service()
         val m = s.propose(marco, MeetingRequest("2026-12-20"))

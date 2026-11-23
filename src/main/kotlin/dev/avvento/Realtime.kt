@@ -21,7 +21,7 @@ data class PresenceMessage(val online: List<String>, val lastSeen: Map<String, S
 /** "Ti e' arrivata una proposta / una risposta": la pagina mostra un avviso e aggiorna la lista. */
 @Serializable
 @SerialName("meeting")
-data class MeetingNotice(val id: String, val by: String, val kind: EventKind, val date: String) : ServerMessage
+data class MeetingNotice(val id: String, val by: String, val kind: EventKind, val date: String, val time: String? = null) : ServerMessage
 
 /** Primo messaggio del browser: la chiave. (Il WebSocket del browser non puo' mandare header.) */
 @Serializable
