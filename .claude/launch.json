@@ -3,15 +3,10 @@
   "configurations": [
     {
       "name": "anteprima-natale",
-      "runtimeExecutable": "docker",
+      "runtimeExecutable": "cmd",
       "runtimeArgs": [
-        "run", "--rm", "--name", "avvento-anteprima",
-        "-p", "127.0.0.1:8095:8080",
-        "-e", "FAKE_TODAY=2026-12-25",
-        "-e", "USER1_NAME=Marco", "-e", "USER2_NAME=Esther",
-        "-e", "ADVENT_FILE=/data/advent.json",
-        "-v", "C:/Users/m.corradini/IdeaProjects/nostro-avvento/advent.json:/data/advent.json:ro",
-        "avvento:anteprima"
+        "/c",
+        "docker build -q -t avvento:anteprima . && docker run --rm --name avvento-anteprima -p 127.0.0.1:8095:8080 -e FAKE_TODAY=2026-12-25 -e USER1_NAME=Marco -e USER2_NAME=Esther -e ADVENT_FILE=/data/advent.json -v C:/Users/m.corradini/IdeaProjects/nostro-avvento/advent.json:/data/advent.json:ro avvento:anteprima"
       ],
       "port": 8095
     }
