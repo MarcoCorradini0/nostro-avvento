@@ -4,7 +4,10 @@
 
 Una piccola web app mobile-first per due persone lontane:
 
-- 🎄 **Calendario dell'avvento** con una sorpresa al giorno (e una casella segreta per Natale)
+- 🎄 **Calendario dell'avvento** con una sorpresa al giorno (e una casella segreta per Natale),
+  sotto un albero di Natale animato con il trenino che gira tra i regali
+- 📷 **Ricordi**: un collage di foto che tutti e due possono riempire; chi prepara il calendario
+  può anche mettere una foto dentro una casella (resta nascosta finché la casella non si apre)
 - 🟢 **Chi è online** in tempo reale, con "vista 5 min fa" (si resta online 3 minuti anche cambiando app)
 - ❄️ **Nevicata insieme**: quando siete online tutti e due nevica più forte e cadono cuori 💙💜
 - 📅 **Incontri**: proponi un giorno (e, se vuoi, un orario) con una descrizione (max 200 parole); l'altra persona
@@ -22,7 +25,7 @@ Telefono ──► GitHub Pages (pagina web/, CDN, sempre accesa)
              Render Free (API Ktor in Docker, si addormenta dopo 15 min)
                  │  JDBC + TLS
                  ▼
-             Render Postgres Free (incontri; dura 30 giorni, poi si torna alla memoria)
+             Render Postgres Free (incontri e foto; dura 30 giorni, poi si torna alla memoria)
 ```
 
 - La pagina si apre subito da GitHub Pages. Se l'API sta dormendo, mostra un loader
@@ -107,8 +110,8 @@ cp advent.example.json deploy/k8s/secrets/advent.json
 k3d cluster create avvento -p "8090:80@loadbalancer" --api-port 127.0.0.1:6550 --wait
 
 # 3. Build dell'immagine e import nel cluster (a ogni nuova versione)
-docker build -t avvento:0.3.4 .
-k3d image import avvento:0.3.4 -c avvento
+docker build -t avvento:0.4.0 .
+k3d image import avvento:0.4.0 -c avvento
 
 # 4. Deploy
 kubectl apply -k deploy/k8s
@@ -141,7 +144,7 @@ Per una nuova versione: aumenta `version` in `build.gradle.kts` e `newTag` in
 | `TIMEZONE` | `Europe/Rome` | Fuso orario per lo sblocco |
 | `ALLOWED_ORIGINS` | – | Siti che possono chiamare l'API (CORS), separati da virgola |
 | `WEB_DIR` | `web` | Cartella della pagina, servita solo se esiste |
-| `DATABASE_URL` | – | PostgreSQL per gli incontri (`postgresql://utente:password@host/db?sslmode=require`). Senza: in memoria |
+| `DATABASE_URL` | – | PostgreSQL per incontri e foto (`postgresql://utente:password@host/db?sslmode=require`). Senza: in memoria |
 | `FAKE_TODAY` | – | Solo per test: finge che oggi sia questa data |
 
 ## Contenuti dell'avvento
@@ -153,7 +156,7 @@ non finiscono su GitHub) e avvia con `ADVENT_FILE=advent.json`.
 - Casella **25**: la sorpresa di Natale. Il server non la manda proprio fino al 25,
   poi compare in alto, grande quanto 12 caselle, e fa nevicare forte.
 
-Tipi di casella: `text` 💌, `song` 🎵, `voucher` 🎟️, `question` ❓, `movie` 🎬, `recipe` 🍪, `christmas` 🎄.
+Tipi di casella: `text` 💌, `quote` ✨, `song` 🎵, `voucher` 🎟️, `question` ❓, `movie` 🎬, `recipe` 🍪, `christmas` 🎄.
 Il campo `url` (facoltativo) deve iniziare con `https://`.
 Il campo `anim` (facoltativo) aggiunge un'animazione al popup: `hearts`, `beat`, `plane`, `kiss`, `together`.
 
@@ -167,6 +170,8 @@ Il campo `anim` (facoltativo) aggiunge un'animazione al popup: `hearts`, `beat`,
 - Incontri: solo chi deve rispondere può accettare o rifiutare; date passate e testi oltre
   200 parole sono rifiutati dal server, non solo dalla pagina.
 - Il frontend usa sempre `textContent`, mai `innerHTML`: niente HTML iniettato.
+- Foto: il server accetta solo JPEG/PNG/WebP (riconosciuti dai primi byte), max 2,5 MB l'una;
+  le foto delle caselle chiuse non si possono scaricare, nemmeno conoscendo l'id.
 - Pagina con Content-Security-Policy e `no-referrer`; API con `nosniff`, `no-referrer` e `X-Frame-Options: DENY`.
 - Container non-root, filesystem in sola lettura su Kubernetes.
 
@@ -177,4 +182,6 @@ Il campo `anim` (facoltativo) aggiunge un'animazione al popup: `hearts`, `beat`,
 - [x] Online su Render + GitHub Pages
 - [x] Stato online 🟢/🔴 via WebSocket + nevicata quando ci siamo tutti e due
 - [x] Calendario incontri con richiesta / accetta / rifiuta / modifica (PostgreSQL)
+- [x] Foto ricordo: collage e foto nelle caselle (ridimensionate sul telefono, salvate su PostgreSQL)
+- [x] Albero di Natale animato con il trenino
 - [ ] Kubernetes con più repliche: Postgres condiviso + Redis pub/sub per la presenza

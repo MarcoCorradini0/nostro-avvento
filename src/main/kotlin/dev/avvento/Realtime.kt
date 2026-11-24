@@ -23,6 +23,11 @@ data class PresenceMessage(val online: List<String>, val lastSeen: Map<String, S
 @SerialName("meeting")
 data class MeetingNotice(val id: String, val by: String, val kind: EventKind, val date: String, val time: String? = null) : ServerMessage
 
+/** "L'altra persona ha aggiunto una foto ai ricordi". */
+@Serializable
+@SerialName("photo")
+data class PhotoNotice(val id: String, val by: String) : ServerMessage
+
 /** Primo messaggio del browser: la chiave. (Il WebSocket del browser non puo' mandare header.) */
 @Serializable
 data class HelloMessage(val key: String)

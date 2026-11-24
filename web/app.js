@@ -24,7 +24,7 @@ const $ = id => document.getElementById(id);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 // Stato della pagina
-const state = { me: null, names: {}, today: null, meetings: [], presence: { online: [], lastSeen: {} } };
+const state = { me: null, names: {}, today: null, meetings: [], photos: [], canPin: false, presence: { online: [], lastSeen: {} } };
 
 // =============================================================================
 // API
@@ -125,7 +125,7 @@ function ago(isoInstant) {
 const ORDER = [7, 15, 1, 22, 11, 4, 18, 24, 9, 2, 13, 20, 5, 16, 23, 10, 3, 19, 8, 14, 21, 6, 12, 17];
 const BIG = new Set([24, 13, 1, 19]);
 const CHRISTMAS = 25;
-const ICONS = { text: "💌", song: "🎵", voucher: "🎟️", question: "❓", movie: "🎬", recipe: "🍪", christmas: "🎄" };
+const ICONS = { text: "💌", quote: "✨", song: "🎵", voucher: "🎟️", question: "❓", movie: "🎬", recipe: "🍪", christmas: "🎄" };
 const LINK_LABELS = { song: "Ascolta 🎵", christmas: "Ascolta 🎵", movie: "Scopri il film 🎬", recipe: "Guarda la ricetta 🍳" };
 
 function openedSet() {
@@ -211,6 +211,11 @@ function openDoor(door, btn) {
     link.hidden = true;
   }
 
+  const photo = $("dlg-photo");
+  photo.hidden = true;
+  photo.removeAttribute("src");
+  if (door.photo) photoSrc(door.photo).then(src => { photo.src = src; photo.hidden = false; }).catch(() => {});
+
   $("door-dialog").showModal();
   markOpened(door.day);
   btn.classList.remove("ready");
@@ -233,7 +238,7 @@ const ANIMS = {
   // cuori che salgono da sotto
   hearts: box => {
     const kinds = ["💙", "💜"];
-    for (let i = 0; i < 14; i++) {
+    for (let i = 0; i < 8; i++) {
       const h = el("span", "a-float", kinds[i % kinds.length]);
       h.style.setProperty("--x", (5 + Math.random() * 90).toFixed(0) + "%");
       h.style.setProperty("--d", (Math.random() * 3).toFixed(2) + "s");
@@ -298,6 +303,7 @@ function connect() {
     try { msg = JSON.parse(e.data); } catch (_) { return; }
     if (msg.type === "presence") { state.presence = msg; renderPresence(); }
     if (msg.type === "meeting") onMeetingNotice(msg);
+    if (msg.type === "photo") { toast(`📷 ${state.names[msg.by]} ha aggiunto una foto ai ricordi`, 4000); refreshPhotos(); }
   };
   socket.onclose = () => {
     if (ws === socket) ws = null;
@@ -564,11 +570,137 @@ $("meeting-form").addEventListener("submit", async e => {
 });
 
 // =============================================================================
+// Ricordi (foto)
+// =============================================================================
+// Le foto si scaricano con la chiave nell'header, quindi passano da fetch -> blob -> URL locale.
+const photoUrls = new Map();
+async function photoSrc(id) {
+  if (!photoUrls.has(id)) {
+    photoUrls.set(id, fetch(API + "/api/photos/" + encodeURIComponent(id), { headers: { "X-Key": key || "" } })
+      .then(res => { if (!res.ok) throw new Error("foto"); return res.blob(); })
+      .then(blob => URL.createObjectURL(blob))
+      .catch(e => { photoUrls.delete(id); throw e; }));
+  }
+  return photoUrls.get(id);
+}
+
+async function refreshPhotos() {
+  if (!state.me) return;
+  try {
+    const data = await api("/api/photos");
+    state.photos = data.photos;
+    state.canPin = data.canPin;
+    renderPhotos();
+  } catch (_) { /* riproveremo */ }
+}
+
+const TILT = [-3, 2, -1.5, 2.5, -2, 1.5, -1, 3];
+function renderPhotos() {
+  $("pin-row").hidden = !state.canPin;
+  const box = $("collage");
+  box.replaceChildren();
+  const list = [...state.photos].reverse(); // le piu' recenti in alto
+  if (list.length === 0) {
+    box.append(el("p", "empty", "Ancora nessuna foto. Aggiungi il primo ricordo 📷"));
+    return;
+  }
+  list.forEach((p, i) => {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "polaroid";
+    card.style.setProperty("--r", TILT[i % TILT.length] + "deg");
+    const img = document.createElement("img");
+    img.alt = "Una nostra foto";
+    photoSrc(p.id).then(src => { img.src = src; }).catch(() => {});
+    card.append(img);
+    if (p.day) {
+      const locked = state.today < state.today.slice(0, 4) + "-12-" + String(p.day).padStart(2, "0");
+      card.append(el("span", "pin", (locked ? "🔒 " : "") + "casella " + p.day));
+    }
+    card.addEventListener("click", () => openPhoto(p));
+    box.append(card);
+  });
+}
+
+function openPhoto(p) {
+  $("pv-img").removeAttribute("src");
+  photoSrc(p.id).then(src => { $("pv-img").src = src; }).catch(() => {});
+  $("pv-delete").hidden = p.by !== state.me.id;
+  $("pv-delete").onclick = async () => {
+    if (!confirm("Togliere questa foto?")) return;
+    try {
+      await apiPost("/api/photos/" + encodeURIComponent(p.id) + "/delete");
+      $("photo-dialog").close();
+      toast("Foto tolta");
+      refreshPhotos();
+    } catch (e) { toast("⚠️ " + e.message, 4000); }
+  };
+  $("photo-dialog").showModal();
+}
+$("pv-close").addEventListener("click", () => $("photo-dialog").close());
+$("photo-dialog").addEventListener("click", e => { if (e.target === $("photo-dialog")) $("photo-dialog").close(); });
+
+// Il telefono rimpicciolisce la foto (lato lungo 1600 px, JPEG): da 5 MB a ~300 KB.
+const MAX_SIDE = 1600;
+const MAX_UPLOAD = 2400000;
+async function shrink(file) {
+  const bmp = await createImageBitmap(file, { imageOrientation: "from-image" });
+  const scale = Math.min(1, MAX_SIDE / Math.max(bmp.width, bmp.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(bmp.width * scale);
+  canvas.height = Math.round(bmp.height * scale);
+  canvas.getContext("2d").drawImage(bmp, 0, 0, canvas.width, canvas.height);
+  bmp.close();
+  for (const q of [0.82, 0.7, 0.55]) {
+    const blob = await new Promise(r => canvas.toBlob(r, "image/jpeg", q));
+    if (blob && blob.size <= MAX_UPLOAD) return blob;
+  }
+  throw new Error("Foto troppo grande");
+}
+
+async function uploadPhoto(blob, day) {
+  const res = await fetch(API + "/api/photos" + (day ? "?day=" + day : ""), {
+    method: "POST",
+    headers: { "X-Key": key || "", "Content-Type": "image/jpeg" },
+    body: blob,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || "Caricamento non riuscito");
+  return data;
+}
+
+for (let d = 1; d <= 25; d++) {
+  const o = document.createElement("option");
+  o.value = d;
+  o.textContent = d === 25 ? "25 (Natale)" : String(d);
+  $("pin-day").append(o);
+}
+
+$("photo-input").addEventListener("change", async e => {
+  const files = [...e.target.files];
+  e.target.value = "";
+  const day = $("pin-day").value ? Number($("pin-day").value) : null;
+  let ok = 0;
+  for (const [i, file] of files.entries()) {
+    toast(files.length > 1 ? `Carico la foto ${i + 1} di ${files.length}…` : "Carico la foto…", 60000);
+    try {
+      await uploadPhoto(await shrink(file), day);
+      ok++;
+    } catch (err) {
+      toast("⚠️ " + err.message, 4000);
+    }
+  }
+  if (ok) toast(day ? `📷 Foto messa nella casella ${day}` : ok > 1 ? `📷 ${ok} foto aggiunte` : "📷 Foto aggiunta", 3000);
+  $("pin-day").value = "";
+  refreshPhotos();
+});
+
+// =============================================================================
 // Tab
 // =============================================================================
 function showView(name) {
-  $("view-advent").hidden = name !== "advent";
-  $("view-meetings").hidden = name !== "meetings";
+  for (const v of ["advent", "photos", "meetings"]) $("view-" + v).hidden = name !== v;
+  if (name === "photos") refreshPhotos();
   for (const b of $("tabs").querySelectorAll("button")) b.classList.toggle("active", b.dataset.view === name);
   try { sessionStorage.setItem("avvento.view", name); } catch (_) {}
 }
@@ -648,7 +780,7 @@ function heartBurst() {
   const box = document.createElement("div");
   box.className = "burst";
   box.setAttribute("aria-hidden", "true");
-  for (let i = 0; i < 24; i++) {
+  for (let i = 0; i < 10; i++) {
     const h = el("span", "a-float", i % 2 ? "💜" : "💙");
     h.style.setProperty("--x", (3 + Math.random() * 94).toFixed(0) + "%");
     h.style.setProperty("--d", (Math.random() * 1.2).toFixed(2) + "s");
@@ -662,7 +794,7 @@ function heartBurst() {
 
 // Neve leggera da soli, forte quando siete online insieme (con i cuori), fortissima a Natale.
 function updateSnow() {
-  setSnow(state.christmas ? 160 : bothOnline() ? 120 : 40, bothOnline() ? 26 : 0);
+  setSnow(state.christmas ? 160 : bothOnline() ? 120 : 40, bothOnline() ? 8 : 0);
 }
 
 // =============================================================================

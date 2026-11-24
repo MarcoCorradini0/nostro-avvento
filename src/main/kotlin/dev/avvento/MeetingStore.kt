@@ -34,26 +34,10 @@ class InMemoryMeetingStore : MeetingStore {
  * PostgreSQL con JDBC "puro", senza ORM: per una tabella sola basta e avanza.
  * Ogni incontro e' una riga con il suo JSON: niente migrazioni se aggiungiamo campi.
  */
-class PostgresMeetingStore(databaseUrl: String) : MeetingStore {
-    private val jdbcUrl: String
-    private val props = Properties()
-    private val mutex = Mutex()
-    private var connection: Connection? = null
+class PostgresMeetingStore(private val db: Postgres) : MeetingStore {
     private val json = Json { ignoreUnknownKeys = true }
 
-    init {
-        // Render da' un indirizzo tipo postgresql://utente:password@host/db (con ?sslmode=require da fuori)
-        val uri = URI(databaseUrl)
-        val (user, password) = uri.rawUserInfo.orEmpty().split(":", limit = 2).map { URLDecoder.decode(it, Charsets.UTF_8) } + listOf("", "")
-        val params = uri.rawQuery.orEmpty().split("&").filter { it.isNotBlank() && !it.startsWith("channel_binding") }
-        val port = if (uri.port > 0) ":${uri.port}" else ""
-        jdbcUrl = "jdbc:postgresql://${uri.host}$port${uri.path}" + if (params.isEmpty()) "" else "?" + params.joinToString("&")
-        props["user"] = user
-        props["password"] = password
-        props["ApplicationName"] = "nostro-avvento"
-    }
-
-    suspend fun init() = sql { c ->
+    suspend fun init() = db.sql { c ->
         c.createStatement().use {
             it.execute(
                 """
@@ -67,20 +51,20 @@ class PostgresMeetingStore(databaseUrl: String) : MeetingStore {
         }
     }
 
-    override suspend fun all(): List<Meeting> = sql { c ->
+    override suspend fun all(): List<Meeting> = db.sql { c ->
         c.prepareStatement("SELECT data FROM meetings").use { st ->
             st.executeQuery().use { rs -> buildList { while (rs.next()) add(json.decodeFromString<Meeting>(rs.getString(1))) } }
         }
     }
 
-    override suspend fun get(id: String): Meeting? = sql { c ->
+    override suspend fun get(id: String): Meeting? = db.sql { c ->
         c.prepareStatement("SELECT data FROM meetings WHERE id = ?").use { st ->
             st.setString(1, id)
             st.executeQuery().use { rs -> if (rs.next()) json.decodeFromString<Meeting>(rs.getString(1)) else null }
         }
     }
 
-    override suspend fun save(meeting: Meeting) = sql { c ->
+    override suspend fun save(meeting: Meeting) = db.sql { c ->
         c.prepareStatement(
             "INSERT INTO meetings (id, data) VALUES (?, ?) ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = now()",
         ).use { st ->
@@ -91,15 +75,35 @@ class PostgresMeetingStore(databaseUrl: String) : MeetingStore {
         Unit
     }
 
-    override suspend fun count(): Int = sql { c ->
+    override suspend fun count(): Int = db.sql { c ->
         c.createStatement().use { st -> st.executeQuery("SELECT count(*) FROM meetings").use { rs -> rs.next(); rs.getInt(1) } }
     }
+}
 
-    /**
-     * Una sola connessione, riusata. Se il database la chiude (riavvio, manutenzione, inattivita'):
-     * se la query fallisce per questo, riapriamo la connessione e riproviamo una volta.
-     */
-    private suspend fun <T> sql(block: (Connection) -> T): T = withContext(Dispatchers.IO) {
+/**
+ * La connessione al Postgres di Render, condivisa da incontri e foto.
+ * Una sola connessione, riusata. Se il database la chiude (riavvio, manutenzione, inattivita'):
+ * se la query fallisce per questo, riapriamo la connessione e riproviamo una volta.
+ */
+class Postgres(databaseUrl: String) {
+    private val jdbcUrl: String
+    private val props = Properties()
+    private val mutex = Mutex()
+    private var connection: Connection? = null
+
+    init {
+        // Render da' un indirizzo tipo postgresql://utente:password@host/db (con ?sslmode=require da fuori)
+        val uri = URI(databaseUrl)
+        val (user, password) = uri.rawUserInfo.orEmpty().split(":", limit = 2).map { URLDecoder.decode(it, Charsets.UTF_8) } + listOf("", "")
+        val params = uri.rawQuery.orEmpty().split("&").filter { it.isNotBlank() && !it.startsWith("channel_binding") }
+        val port = if (uri.port > 0) ":${uri.port}" else ""
+        jdbcUrl = "jdbc:postgresql://${uri.host}$port${uri.path}" + if (params.isEmpty()) "" else "?" + params.joinToString("&")
+        props["user"] = user
+        props["password"] = password
+        props["ApplicationName"] = "nostro-avvento"
+    }
+
+    suspend fun <T> sql(block: (Connection) -> T): T = withContext(Dispatchers.IO) {
         mutex.withLock {
             try {
                 block(connect())

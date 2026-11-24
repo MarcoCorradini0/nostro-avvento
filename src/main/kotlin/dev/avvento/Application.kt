@@ -1,5 +1,6 @@
 package dev.avvento
 
+import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
@@ -16,7 +17,9 @@ import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.cors.routing.CORS
 import io.ktor.server.request.receive
 import io.ktor.server.response.header
+import io.ktor.server.request.contentLength
 import io.ktor.server.response.respond
+import io.ktor.server.response.respondBytes
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
@@ -69,31 +72,48 @@ private val SecurityHeaders = createApplicationPlugin("SecurityHeaders") {
     }
 }
 
+/** Dove stanno incontri e foto. */
+class Stores(val meetings: MeetingStore, val photos: PhotoStore, val persistent: Boolean) {
+    companion object {
+        fun inMemory() = Stores(InMemoryMeetingStore(), InMemoryPhotoStore(), persistent = false)
+    }
+}
+
 /**
- * Senza DATABASE_URL gli incontri stanno in memoria (sviluppo); con Postgres sono salvati davvero.
+ * Senza DATABASE_URL incontri e foto stanno in memoria (sviluppo); con Postgres sono salvati davvero.
  * Se il database non risponde (es. il Postgres free di Render e' scaduto) NON blocchiamo l'avvio:
  * il calendario dell'avvento deve funzionare comunque.
  */
-fun createMeetingStore(config: Config): MeetingStore {
-    val url = config.databaseUrl ?: return InMemoryMeetingStore().also {
-        log.info("Incontri in memoria (DATABASE_URL non impostata)")
+fun createStores(config: Config): Stores {
+    val url = config.databaseUrl ?: return Stores.inMemory().also {
+        log.info("Incontri e foto in memoria (DATABASE_URL non impostata)")
     }
     return try {
-        PostgresMeetingStore(url).also { runBlocking { it.init() } }
+        val db = Postgres(url)
+        val meetings = PostgresMeetingStore(db)
+        val photos = PostgresPhotoStore(db)
+        runBlocking { meetings.init(); photos.init() }
+        log.info("Incontri e foto salvati su PostgreSQL")
+        Stores(meetings, photos, persistent = true)
     } catch (e: Exception) {
         log.error("Database non raggiungibile ({}): uso la memoria", e.message)
-        InMemoryMeetingStore()
+        Stores.inMemory()
     }
 }
 
 fun Application.module(
     config: Config,
     advent: AdventCalendar = AdventCalendar.load(config.adventFile, config.adventYear),
-    store: MeetingStore = createMeetingStore(config),
+    stores: Stores = createStores(config),
 ) {
     val users = UserDirectory(config.users)
     val hub = PresenceHub()
-    val meetings = MeetingService(store, users, today = config::today)
+    val meetings = MeetingService(stores.meetings, users, today = config::today)
+    val photos = PhotoService(
+        stores.photos,
+        isUnlocked = { day -> advent.isUnlocked(day, config.today()) },
+        maxTotalBytes = if (stores.persistent) PhotoService.MAX_TOTAL_DB else PhotoService.MAX_TOTAL_MEMORY,
+    )
 
     install(SecurityHeaders)
     install(ContentNegotiation) { json() }
@@ -131,10 +151,13 @@ fun Application.module(
                 call.requireUser(users) ?: return@get
                 val today = config.today()
                 call.response.header(HttpHeaders.CacheControl, "no-store")
-                call.respond(AdventResponse(today.toString(), advent.doors(today)))
+                // Le caselle aperte con una foto dentro: solo l'id, la foto si scarica a parte.
+                val doors = advent.doors(today).map { d -> if (d.unlocked) d.copy(photo = photos.idForDay(d.day)) else d }
+                call.respond(AdventResponse(today.toString(), doors))
             }
 
             meetingRoutes(users, meetings, hub)
+            photoRoutes(users, photos, hub)
         }
 
         // Tempo reale: chi e' online + avvisi sugli incontri.
@@ -192,6 +215,49 @@ private fun Route.meetingRoutes(users: UserDirectory, meetings: MeetingService, 
         post("/{id}/decline") { call.handle { me -> meetings.decline(me, call.parameters["id"]!!) } }
         post("/{id}/cancel") { call.handle { me -> meetings.cancel(me, call.parameters["id"]!!) } }
         post("/{id}/modify") { call.handle { me -> meetings.modify(me, call.parameters["id"]!!, call.receive<MeetingRequest>()) } }
+    }
+}
+
+private fun Route.photoRoutes(users: UserDirectory, photos: PhotoService, hub: PresenceHub) {
+    route("/photos") {
+        get {
+            val me = call.requireUser(users) ?: return@get
+            call.response.header(HttpHeaders.CacheControl, "no-store")
+            call.respond(PhotosResponse(photos.listFor(me), photos.canPin(me)))
+        }
+        get("/{id}") {
+            val me = call.requireUser(users) ?: return@get
+            val photo = photos.get(me, call.parameters["id"]!!)
+                ?: return@get call.respond(HttpStatusCode.NotFound, ErrorResponse("Foto non trovata"))
+            // Una foto non cambia mai (id nuovo a ogni caricamento): il telefono la puo' tenere in cache.
+            call.response.header(HttpHeaders.CacheControl, "private, max-age=31536000, immutable")
+            call.respondBytes(photo.bytes, ContentType.parse(photo.mime))
+        }
+        post {
+            val me = call.requireUser(users) ?: return@post
+            val len = call.request.contentLength()
+            if (len == null || len > PhotoService.MAX_BYTES) {
+                return@post call.respond(HttpStatusCode.PayloadTooLarge, ErrorResponse("Foto troppo grande"))
+            }
+            val day = call.request.queryParameters["day"]?.toIntOrNull()
+            try {
+                val meta = photos.add(me, call.receive<ByteArray>(), day)
+                call.respond(meta)
+                // Le foto delle caselle sono una sorpresa: nessun avviso.
+                if (meta.day == null) users.other(me)?.let { hub.sendTo(it.id, PhotoNotice(meta.id, me.id)) }
+            } catch (e: MeetingException) {
+                call.respond(e.status, ErrorResponse(e.message ?: "Errore"))
+            }
+        }
+        post("/{id}/delete") {
+            val me = call.requireUser(users) ?: return@post
+            try {
+                photos.delete(me, call.parameters["id"]!!)
+                call.respond(HttpStatusCode.OK, ErrorResponse("ok"))
+            } catch (e: MeetingException) {
+                call.respond(e.status, ErrorResponse(e.message ?: "Errore"))
+            }
+        }
     }
 }
 

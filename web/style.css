@@ -185,6 +185,24 @@ dialog h2 { font-family: Georgia, serif; font-weight: 400; margin: 0 0 10px; }
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+/* ---- Albero di Natale con il trenino ---------------------------------------- */
+.scene { margin: 8px -16px 0; overflow: hidden; }
+.scene svg { display: block; width: 100%; max-width: 460px; height: auto; margin: 0 auto; }
+.light { fill: #fff6c8; animation: twinkle 1.8s ease-in-out infinite; }
+.light:nth-child(3n) { fill: #ffd2e6; animation-delay: .6s; }
+.light:nth-child(3n+1) { fill: #c9e4ff; animation-delay: 1.2s; }
+.light:nth-child(4n) { animation-duration: 2.4s; }
+@keyframes twinkle { 50% { opacity: .25; } }
+.halo { animation: halo 2.6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes halo { 50% { opacity: .45; transform: scale(.8); } }
+.train { animation: train 18s linear infinite; }
+@keyframes train { from { transform: translateX(-140px); } to { transform: translateX(380px); } }
+.wheel { animation: spin .7s linear infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.puff { fill: #e8eef7; opacity: 0; animation: puff 1.5s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+.puff.p2 { animation-delay: .5s; } .puff.p3 { animation-delay: 1s; }
+@keyframes puff { 0% { opacity: .8; transform: translate(0, 0) scale(.6); } 100% { opacity: 0; transform: translate(-14px, -22px) scale(1.6); } }
+
 /* ---- Schermata iniziale ------------------------------------------------------ */
 .splash {
   position: fixed; inset: 0; z-index: 10;
@@ -248,6 +266,28 @@ dialog h2 { font-family: Georgia, serif; font-weight: 400; margin: 0 0 10px; }
   background: var(--red); color: #fff; font-size: .7rem; line-height: 18px; text-align: center;
 }
 
+/* ---- Ricordi (foto) ------------------------------------------------------------ */
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+#view-photos { margin-top: 16px; }
+#view-photos > label.btn { text-align: center; }
+.pin-row { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 10px; color: var(--muted); font-size: .9rem; flex-wrap: wrap; }
+.pin-row select { font: inherit; padding: 6px 8px; border-radius: 8px; border: none; }
+.collage { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px 14px; margin: 22px 4px 0; }
+@media (min-width: 520px) { .collage { grid-template-columns: repeat(3, 1fr); } }
+.polaroid {
+  position: relative; border: none; cursor: pointer; padding: 7px 7px 24px; border-radius: 3px;
+  background: #fffaf0; box-shadow: 0 6px 16px rgba(0, 0, 0, .45); transform: rotate(var(--r));
+  transition: transform .2s ease;
+}
+.polaroid:active { transform: rotate(0) scale(.97); }
+.polaroid img { display: block; width: 100%; aspect-ratio: 1 / 1; object-fit: cover; background: #e9e2d3; }
+.polaroid .pin { position: absolute; left: 0; right: 0; bottom: 4px; font-size: .72rem; color: #7a5230; }
+.dlg-photo { display: block; width: 100%; max-height: 48vh; object-fit: cover; border-radius: 12px; margin: 4px 0 12px; }
+.photo-dialog { padding: 10px; width: min(94vw, 520px); }
+.photo-dialog img { display: block; width: 100%; max-height: 72vh; object-fit: contain; border-radius: 10px; background: #000; }
+.pv-actions { display: flex; gap: 8px; }
+.pv-actions .btn { flex: 1; }
+
 /* ---- Incontri ------------------------------------------------------------------ */
 #view-meetings { margin-top: 16px; }
 .meetings { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
@@ -291,6 +331,8 @@ dialog h2 { font-family: Georgia, serif; font-weight: 400; margin: 0 0 10px; }
   .door.ready, .door.shake, .door.christmas, dialog[open] article, .loader-icon, .dots span { animation: none; }
   .anim span { animation: none !important; }
   .splash *, .together { animation: none !important; opacity: 1 !important; }
+  .scene * { animation: none !important; }
+  .train { transform: translateX(200px); }
   .a-float, .a-pop, .a-arrive, .a-left, .a-right { display: none; }
   .a-merge { opacity: 1; }
 }

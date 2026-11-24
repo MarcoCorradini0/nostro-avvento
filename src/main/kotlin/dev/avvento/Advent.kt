@@ -24,6 +24,8 @@ data class AdventDoor(
     val day: Int,
     val unlocked: Boolean,
     val content: AdventEntry? = null,
+    /** Id della foto messa in questa casella (solo se e' aperta). */
+    val photo: String? = null,
 )
 
 @Serializable

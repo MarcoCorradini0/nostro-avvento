@@ -18,7 +18,7 @@ class MeetingsTest {
     @Test
     fun `se il database non risponde il server parte lo stesso, in memoria`() {
         val config = Config.fromEnv(mapOf("DATABASE_URL" to "postgresql://utente:pw@127.0.0.1:1/nessuno"))
-        assertTrue(createMeetingStore(config) is InMemoryMeetingStore)
+        assertTrue(createStores(config).meetings is InMemoryMeetingStore)
     }
 
     @Test

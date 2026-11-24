@@ -24,7 +24,7 @@ class RealtimeTest {
 
     private fun ApplicationTestBuilder.setup() {
         val config = Config.fromEnv(mapOf("FAKE_TODAY" to "2026-12-01"))
-        application { module(config, calendar, InMemoryMeetingStore()) }
+        application { module(config, calendar, Stores.inMemory()) }
     }
 
     private fun ApplicationTestBuilder.wsClient() = createClient { install(WebSockets) }
