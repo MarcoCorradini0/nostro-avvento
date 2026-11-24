@@ -94,9 +94,7 @@
     <section id="view-photos" aria-label="I nostri ricordi" hidden>
       <label class="btn" for="photo-input">＋ Aggiungi foto</label>
       <input id="photo-input" class="visually-hidden" type="file" accept="image/*" multiple>
-      <label id="pin-row" class="pin-row" hidden>Metti nella casella
-        <select id="pin-day"><option value="">nessuna, va nel collage</option></select>
-      </label>
+      <div class="collage-head"><h2>I nostri ricordi</h2><span id="photo-count"></span></div>
       <div id="collage" class="collage"></div>
     </section>
 
@@ -147,8 +145,9 @@
 
   <dialog id="photo-dialog" class="photo-dialog">
     <img id="pv-img" alt="Una nostra foto">
+    <p id="pv-who" class="pv-who"></p>
     <div class="pv-actions">
-      <button id="pv-delete" class="btn secondary" type="button" hidden>Togli la foto</button>
+      <button id="pv-delete" class="btn secondary" type="button">Togli la foto</button>
       <button id="pv-close" class="btn" type="button">Chiudi</button>
     </div>
   </dialog>

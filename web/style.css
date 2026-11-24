@@ -270,21 +270,26 @@ dialog h2 { font-family: Georgia, serif; font-weight: 400; margin: 0 0 10px; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 #view-photos { margin-top: 16px; }
 #view-photos > label.btn { text-align: center; }
-.pin-row { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 10px; color: var(--muted); font-size: .9rem; flex-wrap: wrap; }
-.pin-row select { font: inherit; padding: 6px 8px; border-radius: 8px; border: none; }
-.collage { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px 14px; margin: 22px 4px 0; }
-@media (min-width: 520px) { .collage { grid-template-columns: repeat(3, 1fr); } }
-.polaroid {
-  position: relative; border: none; cursor: pointer; padding: 7px 7px 24px; border-radius: 3px;
-  background: #fffaf0; box-shadow: 0 6px 16px rgba(0, 0, 0, .45); transform: rotate(var(--r));
-  transition: transform .2s ease;
+.collage-head { display: flex; justify-content: space-between; align-items: baseline; margin: 22px 4px 8px; }
+.collage-head h2 { margin: 0; font-family: Georgia, serif; font-weight: 400; color: var(--gold); font-size: 1.3rem; }
+.collage-head span { color: var(--muted); font-size: .85rem; }
+.collage {
+  display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 96px; grid-auto-flow: dense; gap: 4px;
+  padding: 4px; border-radius: 16px; background: rgba(255, 255, 255, .05); border: 1px solid rgba(244, 201, 93, .35);
 }
-.polaroid:active { transform: rotate(0) scale(.97); }
-.polaroid img { display: block; width: 100%; aspect-ratio: 1 / 1; object-fit: cover; background: #e9e2d3; }
-.polaroid .pin { position: absolute; left: 0; right: 0; bottom: 4px; font-size: .72rem; color: #7a5230; }
+@media (min-width: 520px) { .collage { grid-template-columns: repeat(4, 1fr); grid-auto-rows: 110px; } }
+.collage .empty { grid-column: 1 / -1; grid-row: span 2; align-self: center; }
+.tile { padding: 0; border: none; border-radius: 10px; overflow: hidden; cursor: pointer; background: rgba(255, 255, 255, .06); }
+.tile img { display: block; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .4s ease, transform .3s ease; }
+.tile.ready img { opacity: 1; }
+.tile:active img { transform: scale(1.04); }
+.tile.wide { grid-column: span 2; }
+.tile.tall { grid-row: span 2; }
+.tile.big { grid-column: span 2; grid-row: span 2; }
 .dlg-photo { display: block; width: 100%; max-height: 48vh; object-fit: cover; border-radius: 12px; margin: 4px 0 12px; }
 .photo-dialog { padding: 10px; width: min(94vw, 520px); }
 .photo-dialog img { display: block; width: 100%; max-height: 72vh; object-fit: contain; border-radius: 10px; background: #000; }
+.pv-who { margin: 8px 4px 0; font-size: .8rem; color: #777; text-align: center; }
 .pv-actions { display: flex; gap: 8px; }
 .pv-actions .btn { flex: 1; }
 

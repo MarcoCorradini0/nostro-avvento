@@ -45,7 +45,8 @@ data class Meeting(
 @Serializable
 data class MeetingRequest(val date: String, val text: String = "", val time: String? = null)
 
-class MeetingException(val status: HttpStatusCode, message: String) : Exception(message)
+/** Errore "previsto" dell'API (incontri e foto): diventa una risposta con questo status e messaggio. */
+class ApiException(val status: HttpStatusCode, message: String) : Exception(message)
 
 /**
  * Le regole degli incontri:
@@ -65,7 +66,7 @@ class MeetingService(
 
     suspend fun propose(user: User, req: MeetingRequest): Meeting = mutex.withLock {
         val (date, time) = validate(req)
-        if (store.count() >= MAX_MEETINGS) throw MeetingException(HttpStatusCode.Conflict, "Troppi incontri salvati")
+        if (store.count() >= MAX_MEETINGS) throw ApiException(HttpStatusCode.Conflict, "Troppi incontri salvati")
         val meeting = Meeting(
             id = UUID.randomUUID().toString(),
             date = date.toString(),
@@ -87,7 +88,7 @@ class MeetingService(
     suspend fun modify(user: User, id: String, req: MeetingRequest): Meeting = mutex.withLock {
         val m = load(id)
         if (m.status != MeetingStatus.PENDING && m.status != MeetingStatus.ACCEPTED) {
-            throw MeetingException(HttpStatusCode.Conflict, "Questo incontro non si puo' piu' modificare")
+            throw ApiException(HttpStatusCode.Conflict, "Questo incontro non si puo' piu' modificare")
         }
         val (date, time) = validate(req)
         val updated = m.copy(
@@ -105,7 +106,7 @@ class MeetingService(
     suspend fun cancel(user: User, id: String): Meeting = mutex.withLock {
         val m = load(id)
         if (m.status != MeetingStatus.PENDING && m.status != MeetingStatus.ACCEPTED) {
-            throw MeetingException(HttpStatusCode.Conflict, "Questo incontro e' gia' chiuso")
+            throw ApiException(HttpStatusCode.Conflict, "Questo incontro e' gia' chiuso")
         }
         val updated = m.copy(
             status = MeetingStatus.CANCELLED,
@@ -119,7 +120,7 @@ class MeetingService(
     private suspend fun answer(user: User, id: String, kind: EventKind, status: MeetingStatus): Meeting = mutex.withLock {
         val m = load(id)
         if (m.status != MeetingStatus.PENDING || m.waitingFor != user.id) {
-            throw MeetingException(HttpStatusCode.Conflict, "Non tocca a te rispondere")
+            throw ApiException(HttpStatusCode.Conflict, "Non tocca a te rispondere")
         }
         val updated = m.copy(status = status, waitingFor = null, events = m.events + event(user, kind))
         store.save(updated)
@@ -127,10 +128,10 @@ class MeetingService(
     }
 
     private suspend fun load(id: String): Meeting =
-        store.get(id) ?: throw MeetingException(HttpStatusCode.NotFound, "Incontro non trovato")
+        store.get(id) ?: throw ApiException(HttpStatusCode.NotFound, "Incontro non trovato")
 
     private fun otherId(user: User): String =
-        users.other(user)?.id ?: throw MeetingException(HttpStatusCode.Conflict, "Manca l'altra persona")
+        users.other(user)?.id ?: throw ApiException(HttpStatusCode.Conflict, "Manca l'altra persona")
 
     private fun event(user: User, kind: EventKind, date: String? = null, text: String? = null, time: String? = null) =
         MeetingEvent(at = now().toString(), by = user.id, kind = kind, date = date, text = text, time = time)
@@ -140,19 +141,19 @@ class MeetingService(
         val date = try {
             LocalDate.parse(req.date)
         } catch (_: DateTimeParseException) {
-            throw MeetingException(HttpStatusCode.BadRequest, "Data non valida")
+            throw ApiException(HttpStatusCode.BadRequest, "Data non valida")
         }
         val t = today()
-        if (date.isBefore(t)) throw MeetingException(HttpStatusCode.BadRequest, "La data e' gia' passata")
-        if (date.isAfter(t.plusYears(2))) throw MeetingException(HttpStatusCode.BadRequest, "Data troppo lontana")
+        if (date.isBefore(t)) throw ApiException(HttpStatusCode.BadRequest, "La data e' gia' passata")
+        if (date.isAfter(t.plusYears(2))) throw ApiException(HttpStatusCode.BadRequest, "Data troppo lontana")
         if (req.text.length > MAX_CHARS || wordCount(req.text) > MAX_WORDS) {
-            throw MeetingException(HttpStatusCode.BadRequest, "Massimo $MAX_WORDS parole")
+            throw ApiException(HttpStatusCode.BadRequest, "Massimo $MAX_WORDS parole")
         }
         val time = req.time?.takeIf { it.isNotBlank() }?.let {
             try {
                 LocalTime.parse(it.trim()).withSecond(0).withNano(0).toString()
             } catch (_: DateTimeParseException) {
-                throw MeetingException(HttpStatusCode.BadRequest, "Orario non valido")
+                throw ApiException(HttpStatusCode.BadRequest, "Orario non valido")
             }
         }
         return date to time

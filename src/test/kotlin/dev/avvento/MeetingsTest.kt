@@ -45,14 +45,14 @@ class MeetingsTest {
         val m = s.propose(marco, MeetingRequest("2026-12-20", "Cena", time = "20:30"))
         assertEquals("20:30", m.time)
         assertEquals("21:00", s.modify(lei, m.id, MeetingRequest("2026-12-20", "Un po' piu' tardi", time = "21:00")).time)
-        assertEquals(HttpStatusCode.BadRequest, assertFailsWith<MeetingException> { s.propose(marco, MeetingRequest("2026-12-20", time = "25:99")) }.status)
+        assertEquals(HttpStatusCode.BadRequest, assertFailsWith<ApiException> { s.propose(marco, MeetingRequest("2026-12-20", time = "25:99")) }.status)
     }
 
     @Test
     fun `non puoi accettare la tua stessa proposta`() = runTest {
         val s = service()
         val m = s.propose(marco, MeetingRequest("2026-12-20"))
-        val e = assertFailsWith<MeetingException> { s.accept(marco, m.id) }
+        val e = assertFailsWith<ApiException> { s.accept(marco, m.id) }
         assertEquals(HttpStatusCode.Conflict, e.status)
     }
 
@@ -61,7 +61,7 @@ class MeetingsTest {
         val s = service()
         val a = s.propose(marco, MeetingRequest("2026-12-20"))
         assertEquals(MeetingStatus.DECLINED, s.decline(lei, a.id).status)
-        assertFailsWith<MeetingException> { s.modify(marco, a.id, MeetingRequest("2026-12-22")) }
+        assertFailsWith<ApiException> { s.modify(marco, a.id, MeetingRequest("2026-12-22")) }
 
         val b = s.propose(lei, MeetingRequest("2026-12-27"))
         s.accept(marco, b.id)
@@ -71,11 +71,11 @@ class MeetingsTest {
     @Test
     fun `date passate, testi troppo lunghi e incontri inesistenti sono rifiutati`() = runTest {
         val s = service()
-        assertEquals(HttpStatusCode.BadRequest, assertFailsWith<MeetingException> { s.propose(marco, MeetingRequest("2026-11-30")) }.status)
-        assertEquals(HttpStatusCode.BadRequest, assertFailsWith<MeetingException> { s.propose(marco, MeetingRequest("domani")) }.status)
+        assertEquals(HttpStatusCode.BadRequest, assertFailsWith<ApiException> { s.propose(marco, MeetingRequest("2026-11-30")) }.status)
+        assertEquals(HttpStatusCode.BadRequest, assertFailsWith<ApiException> { s.propose(marco, MeetingRequest("domani")) }.status)
         val tooLong = List(201) { "ciao" }.joinToString(" ")
-        assertEquals(HttpStatusCode.BadRequest, assertFailsWith<MeetingException> { s.propose(marco, MeetingRequest("2026-12-20", tooLong)) }.status)
-        assertEquals(HttpStatusCode.NotFound, assertFailsWith<MeetingException> { s.accept(lei, "non-esiste") }.status)
+        assertEquals(HttpStatusCode.BadRequest, assertFailsWith<ApiException> { s.propose(marco, MeetingRequest("2026-12-20", tooLong)) }.status)
+        assertEquals(HttpStatusCode.NotFound, assertFailsWith<ApiException> { s.accept(lei, "non-esiste") }.status)
         // 200 parole esatte vanno bene
         s.propose(marco, MeetingRequest("2026-12-20", List(200) { "ciao" }.joinToString(" ")))
     }

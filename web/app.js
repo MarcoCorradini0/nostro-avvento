@@ -24,7 +24,7 @@ const $ = id => document.getElementById(id);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 // Stato della pagina
-const state = { me: null, names: {}, today: null, meetings: [], photos: [], canPin: false, presence: { online: [], lastSeen: {} } };
+const state = { me: null, names: {}, today: null, meetings: [], photos: [], presence: { online: [], lastSeen: {} } };
 
 // =============================================================================
 // API
@@ -196,8 +196,9 @@ function openDoor(door, btn) {
   const c = door.content;
   $("dlg-day").textContent = door.day + " dicembre";
   $("dlg-icon").textContent = (c && ICONS[c.type]) || "🎁";
-  const hasAnim = renderAnim(c && c.anim);
-  $("dlg-icon").hidden = hasAnim;
+  // Se la casella ha una foto, la foto prende il posto di icona e animazione.
+  const hasAnim = renderAnim(door.photo ? null : c && c.anim);
+  $("dlg-icon").hidden = hasAnim || Boolean(door.photo);
   // textContent (mai innerHTML): il testo viene mostrato cosi' com'e', nessun codice iniettato
   $("dlg-title").textContent = (c && c.title) || "Sorpresa in arrivo...";
   $("dlg-text").textContent = (c && c.text) || "Questa casella e' ancora vuota, ci sto lavorando 😅";
@@ -334,10 +335,11 @@ document.addEventListener("visibilitychange", () => {
 });
 
 // Se la pagina e' rimasta aperta in background fino al giorno dopo, apriamo le caselle nuove.
-async function refreshAdvent() {
+// force: ridisegna anche se il giorno e' lo stesso (es. sono cambiate le foto delle caselle).
+async function refreshAdvent(force = false) {
   try {
     const advent = await api("/api/advent");
-    if (advent.today === state.today) return;
+    if (advent.today === state.today && !force) return;
     state.today = advent.today;
     renderAdvent(advent);
     renderMeetings(); // "passato / prossimo" dipende dalla data di oggi
@@ -588,46 +590,50 @@ async function refreshPhotos() {
   if (!state.me) return;
   try {
     const data = await api("/api/photos");
+    const changed = data.photos.map(p => p.id).join() !== state.photos.map(p => p.id).join();
     state.photos = data.photos;
-    state.canPin = data.canPin;
     renderPhotos();
+    if (changed) refreshAdvent(true); // le caselle con foto pescano dai ricordi
   } catch (_) { /* riproveremo */ }
 }
 
-const TILT = [-3, 2, -1.5, 2.5, -2, 1.5, -1, 3];
+// Collage a mosaico: le foto orizzontali occupano due colonne, le verticali due righe,
+// e ogni tanto una foto grande. Il resto lo incastra la griglia (grid-auto-flow: dense).
 function renderPhotos() {
-  $("pin-row").hidden = !state.canPin;
   const box = $("collage");
   box.replaceChildren();
   const list = [...state.photos].reverse(); // le piu' recenti in alto
+  $("photo-count").textContent = list.length ? (list.length === 1 ? "1 foto" : list.length + " foto") : "";
   if (list.length === 0) {
     box.append(el("p", "empty", "Ancora nessuna foto. Aggiungi il primo ricordo 📷"));
     return;
   }
   list.forEach((p, i) => {
-    const card = document.createElement("button");
-    card.type = "button";
-    card.className = "polaroid";
-    card.style.setProperty("--r", TILT[i % TILT.length] + "deg");
+    const tile = document.createElement("button");
+    tile.type = "button";
+    tile.className = "tile";
     const img = document.createElement("img");
     img.alt = "Una nostra foto";
+    img.addEventListener("load", () => {
+      const ratio = img.naturalWidth / img.naturalHeight;
+      if (i % 7 === 0 && list.length > 2) tile.classList.add("big");
+      else if (ratio > 1.25) tile.classList.add("wide");
+      else if (ratio < 0.8) tile.classList.add("tall");
+      tile.classList.add("ready");
+    });
     photoSrc(p.id).then(src => { img.src = src; }).catch(() => {});
-    card.append(img);
-    if (p.day) {
-      const locked = state.today < state.today.slice(0, 4) + "-12-" + String(p.day).padStart(2, "0");
-      card.append(el("span", "pin", (locked ? "🔒 " : "") + "casella " + p.day));
-    }
-    card.addEventListener("click", () => openPhoto(p));
-    box.append(card);
+    tile.append(img);
+    tile.addEventListener("click", () => openPhoto(p));
+    box.append(tile);
   });
 }
 
 function openPhoto(p) {
   $("pv-img").removeAttribute("src");
   photoSrc(p.id).then(src => { $("pv-img").src = src; }).catch(() => {});
-  $("pv-delete").hidden = p.by !== state.me.id;
+  $("pv-who").textContent = "Aggiunta da " + state.names[p.by] + " · " + fmtShort.format(new Date(p.at));
   $("pv-delete").onclick = async () => {
-    if (!confirm("Togliere questa foto?")) return;
+    if (!confirm("Togliere questa foto dai ricordi?")) return;
     try {
       await apiPost("/api/photos/" + encodeURIComponent(p.id) + "/delete");
       $("photo-dialog").close();
@@ -640,7 +646,7 @@ function openPhoto(p) {
 $("pv-close").addEventListener("click", () => $("photo-dialog").close());
 $("photo-dialog").addEventListener("click", e => { if (e.target === $("photo-dialog")) $("photo-dialog").close(); });
 
-// Il telefono rimpicciolisce la foto (lato lungo 1600 px, JPEG): da 5 MB a ~300 KB.
+// Il telefono rimpicciolisce la foto (lato lungo 1600 px, JPEG): da 5 MB a qualche centinaio di KB.
 const MAX_SIDE = 1600;
 const MAX_UPLOAD = 2400000;
 async function shrink(file) {
@@ -658,8 +664,8 @@ async function shrink(file) {
   throw new Error("Foto troppo grande");
 }
 
-async function uploadPhoto(blob, day) {
-  const res = await fetch(API + "/api/photos" + (day ? "?day=" + day : ""), {
+async function uploadPhoto(blob) {
+  const res = await fetch(API + "/api/photos", {
     method: "POST",
     headers: { "X-Key": key || "", "Content-Type": "image/jpeg" },
     body: blob,
@@ -669,29 +675,20 @@ async function uploadPhoto(blob, day) {
   return data;
 }
 
-for (let d = 1; d <= 25; d++) {
-  const o = document.createElement("option");
-  o.value = d;
-  o.textContent = d === 25 ? "25 (Natale)" : String(d);
-  $("pin-day").append(o);
-}
-
 $("photo-input").addEventListener("change", async e => {
   const files = [...e.target.files];
   e.target.value = "";
-  const day = $("pin-day").value ? Number($("pin-day").value) : null;
   let ok = 0;
   for (const [i, file] of files.entries()) {
     toast(files.length > 1 ? `Carico la foto ${i + 1} di ${files.length}…` : "Carico la foto…", 60000);
     try {
-      await uploadPhoto(await shrink(file), day);
+      await uploadPhoto(await shrink(file));
       ok++;
     } catch (err) {
       toast("⚠️ " + err.message, 4000);
     }
   }
-  if (ok) toast(day ? `📷 Foto messa nella casella ${day}` : ok > 1 ? `📷 ${ok} foto aggiunte` : "📷 Foto aggiunta", 3000);
-  $("pin-day").value = "";
+  if (ok) toast(ok > 1 ? `📷 ${ok} foto aggiunte` : "📷 Foto aggiunta", 3000);
   refreshPhotos();
 });
 

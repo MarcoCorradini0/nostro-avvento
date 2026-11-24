@@ -16,6 +16,8 @@ data class AdventEntry(
     val url: String? = null,
     /** Animazione facoltativa nel popup: una di [ANIMATIONS]. */
     val anim: String? = null,
+    /** Se true, la casella mostra anche una foto presa a caso dai ricordi. */
+    val withPhoto: Boolean = false,
 )
 
 /** Cosa mandiamo al browser: il contenuto c'e' SOLO se la casella e' sbloccata. */
@@ -24,7 +26,7 @@ data class AdventDoor(
     val day: Int,
     val unlocked: Boolean,
     val content: AdventEntry? = null,
-    /** Id della foto messa in questa casella (solo se e' aperta). */
+    /** Id della foto dei ricordi mostrata in questa casella (solo se e' aperta). */
     val photo: String? = null,
 )
 
@@ -38,6 +40,9 @@ class AdventCalendar(
     private val entries: Map<Int, AdventEntry>,
     private val year: Int,
 ) {
+    /** Le caselle che mostrano una foto dei ricordi. */
+    fun photoDays(): List<Int> = entries.values.filter { it.withPhoto }.map { it.day }.sorted()
+
     /** La casella N si apre dal giorno N dicembre (ora del server, non del telefono). */
     fun isUnlocked(day: Int, today: LocalDate): Boolean =
         !today.isBefore(LocalDate.of(year, 12, day))

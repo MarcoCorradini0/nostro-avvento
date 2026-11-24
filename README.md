@@ -6,8 +6,8 @@ Una piccola web app mobile-first per due persone lontane:
 
 - 🎄 **Calendario dell'avvento** con una sorpresa al giorno (e una casella segreta per Natale),
   sotto un albero di Natale animato con il trenino che gira tra i regali
-- 📷 **Ricordi**: un collage di foto che tutti e due possono riempire; chi prepara il calendario
-  può anche mettere una foto dentro una casella (resta nascosta finché la casella non si apre)
+- 📷 **Ricordi**: tutti e due caricano foto e si crea da solo un collage a mosaico;
+  alcune caselle (`"withPhoto": true`) mostrano una di queste foto, presa a caso senza doppioni
 - 🟢 **Chi è online** in tempo reale, con "vista 5 min fa" (si resta online 3 minuti anche cambiando app)
 - ❄️ **Nevicata insieme**: quando siete online tutti e due nevica più forte e cadono cuori 💙💜
 - 📅 **Incontri**: proponi un giorno (e, se vuoi, un orario) con una descrizione (max 200 parole); l'altra persona
@@ -158,6 +158,7 @@ non finiscono su GitHub) e avvia con `ADVENT_FILE=advent.json`.
 
 Tipi di casella: `text` 💌, `quote` ✨, `song` 🎵, `voucher` 🎟️, `question` ❓, `movie` 🎬, `recipe` 🍪, `christmas` 🎄.
 Il campo `url` (facoltativo) deve iniziare con `https://`.
+Il campo `withPhoto` (facoltativo) mostra nella casella una foto dei ricordi.
 Il campo `anim` (facoltativo) aggiunge un'animazione al popup: `hearts`, `beat`, `plane`, `kiss`, `together`.
 
 ## Sicurezza e privacy
@@ -170,8 +171,7 @@ Il campo `anim` (facoltativo) aggiunge un'animazione al popup: `hearts`, `beat`,
 - Incontri: solo chi deve rispondere può accettare o rifiutare; date passate e testi oltre
   200 parole sono rifiutati dal server, non solo dalla pagina.
 - Il frontend usa sempre `textContent`, mai `innerHTML`: niente HTML iniettato.
-- Foto: il server accetta solo JPEG/PNG/WebP (riconosciuti dai primi byte), max 2,5 MB l'una;
-  le foto delle caselle chiuse non si possono scaricare, nemmeno conoscendo l'id.
+- Foto: il server accetta solo JPEG/PNG/WebP (riconosciuti dai primi byte), max 2,5 MB l'una.
 - Pagina con Content-Security-Policy e `no-referrer`; API con `nosniff`, `no-referrer` e `X-Frame-Options: DENY`.
 - Container non-root, filesystem in sola lettura su Kubernetes.
 
@@ -182,6 +182,6 @@ Il campo `anim` (facoltativo) aggiunge un'animazione al popup: `hearts`, `beat`,
 - [x] Online su Render + GitHub Pages
 - [x] Stato online 🟢/🔴 via WebSocket + nevicata quando ci siamo tutti e due
 - [x] Calendario incontri con richiesta / accetta / rifiuta / modifica (PostgreSQL)
-- [x] Foto ricordo: collage e foto nelle caselle (ridimensionate sul telefono, salvate su PostgreSQL)
+- [x] Foto ricordo: collage a mosaico e foto a caso nelle caselle (ridimensionate sul telefono, salvate su PostgreSQL)
 - [x] Albero di Natale animato con il trenino
 - [ ] Kubernetes con più repliche: Postgres condiviso + Redis pub/sub per la presenza
