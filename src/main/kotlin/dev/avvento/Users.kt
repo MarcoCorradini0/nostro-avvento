@@ -19,6 +19,8 @@ class UserDirectory(private val users: List<User>) {
     }
 
     fun other(user: User): User? = users.firstOrNull { it.id != user.id }
+
+    fun byId(id: String): User? = users.firstOrNull { it.id == id }
 }
 
 fun ApplicationCall.keyHeader(): String? = request.headers["X-Key"]

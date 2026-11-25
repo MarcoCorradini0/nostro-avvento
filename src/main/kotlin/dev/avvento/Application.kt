@@ -8,6 +8,7 @@ import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.createApplicationPlugin
+import io.ktor.server.application.hooks.CallFailed
 import io.ktor.server.application.install
 import io.ktor.server.cio.CIO
 import io.ktor.server.engine.embeddedServer
@@ -20,6 +21,7 @@ import io.ktor.server.response.header
 import io.ktor.server.request.contentLength
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondBytes
+import io.ktor.server.response.respondOutputStream
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
@@ -39,6 +41,9 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.Serializable
 import org.slf4j.LoggerFactory
 import java.io.File
+import java.sql.SQLException
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 import kotlin.time.Duration.Companion.seconds
 
 fun main() {
@@ -60,6 +65,8 @@ data class ErrorResponse(val error: String)
 
 private val log = LoggerFactory.getLogger("avvento")
 
+private val exportJson = kotlinx.serialization.json.Json { prettyPrint = true }
+
 /**
  * Header di sicurezza su ogni risposta: il browser non "indovina" il tipo dei file,
  * non manda l'indirizzo (con la chiave) ad altri siti e non mostra l'app dentro iframe altrui.
@@ -76,6 +83,19 @@ private val SecurityHeaders = createApplicationPlugin("SecurityHeaders") {
 class Stores(val meetings: MeetingStore, val photos: PhotoStore, val persistent: Boolean) {
     companion object {
         fun inMemory() = Stores(InMemoryMeetingStore(), InMemoryPhotoStore(), persistent = false)
+    }
+}
+
+/**
+ * Se il database smette di rispondere (es. il Postgres free di Render e' scaduto), incontri e foto
+ * rispondono "503, riprova piu' tardi" invece di un errore generico. Il calendario non usa il database.
+ */
+private val DatabaseDown = createApplicationPlugin("DatabaseDown") {
+    on(CallFailed) { call, cause ->
+        if (cause is SQLException) {
+            log.warn("Database non disponibile: {}", cause.message)
+            call.respond(HttpStatusCode.ServiceUnavailable, ErrorResponse("Il database non risponde, riprova più tardi"))
+        }
     }
 }
 
@@ -115,6 +135,7 @@ fun Application.module(
     )
 
     install(SecurityHeaders)
+    install(DatabaseDown)
     install(ContentNegotiation) { json() }
     install(WebSockets) {
         pingPeriod = 25.seconds // tiene viva la connessione (e sveglio il server finche' la pagina e' aperta)
@@ -151,13 +172,38 @@ fun Application.module(
                 val today = config.today()
                 call.response.header(HttpHeaders.CacheControl, "no-store")
                 // Le caselle aperte "con foto": solo l'id, la foto si scarica a parte.
-                val assigned = photos.forDoors(advent.photoDays())
+                // Se il database non risponde, le caselle si aprono lo stesso (senza foto).
+                val assigned = runCatching { photos.forDoors(advent.photoDays()) }.getOrElse { emptyMap() }
                 val doors = advent.doors(today).map { d -> if (d.unlocked) d.copy(photo = assigned[d.day]) else d }
                 call.respond(AdventResponse(today.toString(), doors))
             }
 
             meetingRoutes(users, meetings, hub)
             photoRoutes(users, photos, hub)
+
+            // Tutti i ricordi in un file zip (foto + incontri), da salvare prima che il database scada.
+            get("/export") {
+                call.requireUser(users) ?: return@get
+                val list = photos.list()
+                val meetingList = meetings.list()
+                call.response.header(HttpHeaders.ContentDisposition, "attachment; filename=\"nostro-avvento-ricordi.zip\"")
+                call.response.header(HttpHeaders.CacheControl, "no-store")
+                call.respondOutputStream(ContentType.parse("application/zip")) {
+                    ZipOutputStream(this).use { zip ->
+                        list.forEachIndexed { i, meta ->
+                            val photo = photos.get(meta.id) ?: return@forEachIndexed
+                            val ext = photo.mime.substringAfter("/").replace("jpeg", "jpg")
+                            val who = users.byId(meta.by)?.name ?: meta.by
+                            zip.putNextEntry(ZipEntry("foto/%03d-%s-%s.%s".format(i + 1, meta.at.take(10), who, ext)))
+                            zip.write(photo.bytes)
+                            zip.closeEntry()
+                        }
+                        zip.putNextEntry(ZipEntry("incontri.json"))
+                        zip.write(exportJson.encodeToString(MeetingsResponse.serializer(), MeetingsResponse(meetingList)).toByteArray())
+                        zip.closeEntry()
+                    }
+                }
+            }
         }
 
         // Tempo reale: chi e' online + avvisi sugli incontri.

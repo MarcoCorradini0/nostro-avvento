@@ -42,8 +42,10 @@ async function api(path) {
       if (res.status === 401) throw new Error("unauthorized");
       const isJson = (res.headers.get("content-type") || "").includes("application/json");
       if (res.ok && isJson) return res.json();
+      // Un errore in JSON arriva dal nostro server (es. database giu'): inutile riprovare per 2 minuti.
+      if (isJson) throw new Error("server");
     } catch (e) {
-      if (e.message === "unauthorized") throw e;
+      if (e.message === "unauthorized" || e.message === "server") throw e;
       // errore di rete: il server sta ancora dormendo, riproviamo
     }
     if (Date.now() > deadline) throw new Error("timeout");
@@ -675,6 +677,26 @@ async function uploadPhoto(blob) {
   return data;
 }
 
+// Scarica tutti i ricordi (foto + incontri) in un file zip.
+$("export").addEventListener("click", async () => {
+  toast("Preparo il file con tutti i ricordi…", 60000);
+  try {
+    const res = await fetch(API + "/api/export", { headers: { "X-Key": key || "" } });
+    if (!res.ok) throw new Error("Download non riuscito, riprova");
+    const url = URL.createObjectURL(await res.blob());
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "nostro-avvento-ricordi.zip";
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    toast("⬇️ Ricordi scaricati", 3000);
+  } catch (e) {
+    toast("⚠️ " + e.message, 4000);
+  }
+});
+
 $("photo-input").addEventListener("change", async e => {
   const files = [...e.target.files];
   e.target.value = "";
@@ -823,7 +845,10 @@ async function init() {
   const stopLoader = startLoader();
   try {
     // Le tre chiamate partono insieme: meno attesa.
-    const [me, advent, meetings] = await Promise.all([api("/api/me"), api("/api/advent"), api("/api/meetings")]);
+    // Incontri a parte: se il database non risponde, il calendario si apre lo stesso.
+    const [me, advent, meetings] = await Promise.all([
+      api("/api/me"), api("/api/advent"), api("/api/meetings").catch(() => ({ meetings: [] })),
+    ]);
     stopLoader();
     const heart = HEART[me.id] || "💜";
     $("splash-sub").textContent = "Hola, " + me.name + " " + heart;
