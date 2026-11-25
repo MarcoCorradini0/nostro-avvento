@@ -1,5 +1,6 @@
 # Pubblica la pagina (cartella web/) su GitHub Pages: gratis, sempre accesa, veloce (CDN).
 # Parte solo quando cambia qualcosa in web/.
+# Se il deploy fallisce con "No artifacts named github-pages" e' un intoppo di GitHub: basta rilanciarlo.
 name: Pages
 
 on:
