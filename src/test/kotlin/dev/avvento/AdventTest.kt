@@ -48,6 +48,16 @@ class AdventTest {
     }
 
     @Test
+    fun `l'anteprima apre tutte le caselle, ma solo a chi prepara il calendario`() = testApplication {
+        val config = Config.fromEnv(mapOf("FAKE_TODAY" to "2026-12-01", "ADVENT_YEAR" to "2026"))
+        application { module(config, calendar) }
+        val marco = client.get("/api/advent?preview=1") { header("X-Key", "dev-chiave-1") }.bodyAsText()
+        val lei = client.get("/api/advent?preview=1") { header("X-Key", "dev-chiave-2") }.bodyAsText()
+        assertTrue("SEGRETO" in marco)
+        assertFalse("SEGRETO" in lei) // la casella 5 resta chiusa per lei
+    }
+
+    @Test
     fun `la casella 25 e' invisibile fino a Natale`() {
         assertTrue(calendar.doors(LocalDate.of(2026, 12, 24)).none { it.day == 25 })
         assertEquals(24, calendar.doors(LocalDate.of(2026, 12, 24)).size)

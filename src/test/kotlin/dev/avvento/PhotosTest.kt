@@ -44,13 +44,13 @@ class PhotosTest {
     }
 
     @Test
-    fun `le caselle con foto ricevono foto diverse finche' ce ne sono abbastanza`() = runTest {
+    fun `le caselle con foto ricevono foto diverse, mai doppioni`() = runTest {
         val s = service()
         assertTrue(s.forDoors(listOf(1, 5, 9)).isEmpty()) // nessuna foto: nessuna casella con foto
-        repeat(3) { s.add(marco, jpeg) }
+        repeat(2) { s.add(marco, jpeg) }
         val assigned = s.forDoors(listOf(9, 1, 5))
-        assertEquals(setOf(1, 5, 9), assigned.keys)
-        assertEquals(3, assigned.values.toSet().size) // niente doppioni
+        assertEquals(setOf(1, 5), assigned.keys) // 2 foto: la 9 tiene la sua animazione
+        assertEquals(2, assigned.values.toSet().size)
         assertEquals(assigned, s.forDoors(listOf(1, 5, 9))) // e sempre le stesse
     }
 

@@ -168,13 +168,16 @@ fun Application.module(
             }
 
             get("/advent") {
-                call.requireUser(users) ?: return@get
+                val me = call.requireUser(users) ?: return@get
                 val today = config.today()
+                // Anteprima (?preview=1): solo chi prepara il calendario (utente 1) vede tutto come a Natale.
+                val preview = call.request.queryParameters["preview"] == "1" && me.id == "u1"
+                val doorsDay = if (preview) java.time.LocalDate.of(config.adventYear, 12, AdventCalendar.LAST_DAY) else today
                 call.response.header(HttpHeaders.CacheControl, "no-store")
                 // Le caselle aperte "con foto": solo l'id, la foto si scarica a parte.
                 // Se il database non risponde, le caselle si aprono lo stesso (senza foto).
                 val assigned = runCatching { photos.forDoors(advent.photoDays()) }.getOrElse { emptyMap() }
-                val doors = advent.doors(today).map { d -> if (d.unlocked) d.copy(photo = assigned[d.day]) else d }
+                val doors = advent.doors(doorsDay).map { d -> if (d.unlocked) d.copy(photo = assigned[d.day]) else d }
                 call.respond(AdventResponse(today.toString(), doors))
             }
 

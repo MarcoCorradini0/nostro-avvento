@@ -151,6 +151,20 @@ dialog h2 { font-family: Georgia, serif; font-weight: 400; margin: 0 0 10px; }
 .a-pop0 { --px: -60px; --py: -30px; } .a-pop1 { --px: 0; --py: -42px; } .a-pop2 { --px: 60px; --py: -30px; }
 @keyframes pop-out { 0%, 18% { opacity: 0; transform: translate(0, 0) scale(.4); } 30% { opacity: 1; } 70%, 100% { opacity: 0; transform: translate(var(--px), var(--py)) scale(1.1); } }
 
+.a-snowman { font-size: 3.4rem; animation: bob 2s ease-in-out infinite; }
+.a-flake { position: absolute; top: -14px; left: var(--x); color: #9bb3cf; font-size: .9rem; animation: flake 2.6s linear var(--d) infinite; }
+@keyframes flake { to { transform: translateY(120px) rotate(180deg); } }
+.a-gift { font-size: 3.4rem; animation: shake-gift 2s ease-in-out infinite; }
+@keyframes shake-gift { 0%, 40%, 100% { transform: rotate(0); } 10% { transform: rotate(-12deg); } 20% { transform: rotate(12deg); } 30% { transform: rotate(-6deg); } }
+.a-sleigh { position: absolute; top: 30px; font-size: 2rem; animation: sleigh 4.5s linear infinite; }
+@keyframes sleigh { from { left: -90px; transform: translateY(10px); } 50% { transform: translateY(-12px); } to { left: 100%; transform: translateY(6px); } }
+.a-moon { position: absolute; right: 14px; top: 6px; font-size: 1.5rem; opacity: .8; }
+.a-tree { font-size: 3.6rem; }
+.a-spark { position: absolute; font-size: 1rem; opacity: 0; transform: translate(var(--px), var(--py)); animation: spark 1.6s ease-in-out var(--d) infinite; }
+@keyframes spark { 50% { opacity: 1; transform: translate(var(--px), var(--py)) scale(1.3); } }
+.a-star { position: absolute; left: var(--x); top: var(--y); color: var(--gold); font-size: 1rem; animation: twinkle 1.8s ease-in-out var(--d) infinite; }
+.a-shoot { position: absolute; left: -30px; top: 0; font-size: 1.6rem; animation: shoot 3.5s ease-in 1s infinite; opacity: 0; }
+@keyframes shoot { 0% { opacity: 0; transform: translate(0, 0); } 10% { opacity: 1; } 40%, 100% { opacity: 0; transform: translate(260px, 70px); } }
 .a-left, .a-right, .a-merge { position: absolute; font-size: 2.6rem; }
 .a-left { animation: from-left 3.2s ease-in-out infinite; }
 .a-right { animation: from-right 3.2s ease-in-out infinite; }
@@ -339,6 +353,7 @@ dialog h2 { font-family: Georgia, serif; font-weight: 400; margin: 0 0 10px; }
   .splash *, .together { animation: none !important; opacity: 1 !important; }
   .scene * { animation: none !important; }
   .train { transform: translateX(200px); }
-  .a-float, .a-pop, .a-arrive, .a-left, .a-right { display: none; }
+  .a-float, .a-pop, .a-arrive, .a-left, .a-right, .a-flake, .a-shoot { display: none; }
+  .a-sleigh { left: 30%; }
   .a-merge { opacity: 1; }
 }

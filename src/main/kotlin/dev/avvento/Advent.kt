@@ -16,7 +16,7 @@ data class AdventEntry(
     val url: String? = null,
     /** Animazione facoltativa nel popup: una di [ANIMATIONS]. */
     val anim: String? = null,
-    /** Se true, la casella mostra anche una foto presa a caso dai ricordi. */
+    /** Se true, la casella mostra una foto presa a caso dai ricordi (se ce ne sono abbastanza, se no l'animazione). */
     val withPhoto: Boolean = false,
 )
 
@@ -62,7 +62,7 @@ class AdventCalendar(
         const val LAST_DAY = 25
 
         /** Le animazioni che la pagina sa disegnare (vedi web/app.js). */
-        val ANIMATIONS = setOf("hearts", "beat", "plane", "kiss", "together")
+        val ANIMATIONS = setOf("hearts", "beat", "plane", "kiss", "together", "snow", "gift", "sleigh", "tree", "stars")
         private val json = Json { ignoreUnknownKeys = true }
 
         fun load(path: String, year: Int): AdventCalendar {

@@ -110,14 +110,11 @@ class PhotoService(
 
     /**
      * Quale foto va in ogni casella "con foto". Gli id sono UUID casuali: ordinandoli otteniamo
-     * un ordine a caso ma stabile. Casella k-esima -> foto k-esima: niente doppioni
-     * finche' le foto sono almeno quante le caselle.
+     * un ordine a caso ma stabile. Casella k-esima -> foto k-esima, mai doppioni:
+     * se le foto sono meno delle caselle, le ultime caselle restano con la loro animazione.
      */
-    suspend fun forDoors(days: List<Int>): Map<Int, String> {
-        val shuffled = store.list().map { it.id }.sorted()
-        if (shuffled.isEmpty()) return emptyMap()
-        return days.sorted().withIndex().associate { (k, day) -> day to shuffled[k % shuffled.size] }
-    }
+    suspend fun forDoors(days: List<Int>): Map<Int, String> =
+        days.sorted().zip(store.list().map { it.id }.sorted()).toMap()
 
     suspend fun add(user: User, bytes: ByteArray): PhotoMeta = mutex.withLock {
         val mime = sniff(bytes) ?: throw ApiException(HttpStatusCode.UnsupportedMediaType, "Serve una foto JPEG, PNG o WebP")

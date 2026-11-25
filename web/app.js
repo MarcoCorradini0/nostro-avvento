@@ -8,6 +8,15 @@
 const KEY_STORAGE = "avvento.key";
 const OPENED_STORAGE = "avvento.opened";
 
+// Anteprima (?anteprima=1): tutte le caselle aperte, per provarle. Il server la concede solo all'utente 1.
+const PREVIEW = (() => {
+  try {
+    if (new URLSearchParams(location.search).get("anteprima") === "1") sessionStorage.setItem("avvento.preview", "1");
+    return sessionStorage.getItem("avvento.preview") === "1";
+  } catch (_) { return false; }
+})();
+const ADVENT_PATH = "/api/advent" + (PREVIEW ? "?preview=1" : "");
+
 function readKey() {
   const fromUrl = new URLSearchParams(location.search).get("k");
   if (fromUrl) {
@@ -220,7 +229,7 @@ function openDoor(door, btn) {
   if (door.photo) photoSrc(door.photo).then(src => { photo.src = src; photo.hidden = false; }).catch(() => {});
 
   $("door-dialog").showModal();
-  markOpened(door.day);
+  if (!PREVIEW) markOpened(door.day); // in anteprima non segniamo le caselle come aperte
   btn.classList.remove("ready");
   btn.classList.add("opened");
   if (door.day === CHRISTMAS) { state.christmas = true; updateSnow(); }
@@ -262,6 +271,48 @@ const ANIMS = {
   kiss: box => {
     box.append(el("span", "a-kiss", "💋"));
     ["💜", "💙", "💜"].forEach((h, i) => box.append(el("span", "a-pop a-pop" + i, h)));
+  },
+  // pupazzo di neve sotto la neve
+  snow: box => {
+    box.append(el("span", "a-snowman", "⛄"));
+    for (let i = 0; i < 7; i++) {
+      const f = el("span", "a-flake", "❄");
+      f.style.setProperty("--x", (8 + i * 13) + "%");
+      f.style.setProperty("--d", (i * 0.35).toFixed(2) + "s");
+      box.append(f);
+    }
+  },
+  // un regalo che si agita e ne escono i nostri cuori
+  gift: box => {
+    box.append(el("span", "a-gift", "🎁"));
+    ["💙", "💜", "✨"].forEach((h, i) => box.append(el("span", "a-pop a-pop" + i, h)));
+  },
+  // la slitta con la renna che attraversa il cielo
+  sleigh: box => {
+    const s = el("span", "a-sleigh", "🦌🛷");
+    box.append(s, el("span", "a-moon", "🌙"));
+  },
+  // l'albero con le lucine che brillano
+  tree: box => {
+    box.append(el("span", "a-tree", "🎄"));
+    [[-46, -18], [42, -26], [-30, 22], [36, 18], [0, -40]].forEach(([x, y], i) => {
+      const s = el("span", "a-spark", "✨");
+      s.style.setProperty("--px", x + "px");
+      s.style.setProperty("--py", y + "px");
+      s.style.setProperty("--d", (i * 0.3).toFixed(1) + "s");
+      box.append(s);
+    });
+  },
+  // cielo stellato con una stella cadente
+  stars: box => {
+    [[12, 20], [30, 60], [55, 18], [75, 55], [88, 25], [45, 75]].forEach(([x, y], i) => {
+      const s = el("span", "a-star", i % 2 ? "⭐" : "✦");
+      s.style.setProperty("--x", x + "%");
+      s.style.setProperty("--y", y + "%");
+      s.style.setProperty("--d", (i * 0.4).toFixed(1) + "s");
+      box.append(s);
+    });
+    box.append(el("span", "a-shoot", "🌠"));
   },
   // due cuori lontani (il mio e il tuo) che si avvicinano
   together: box => box.append(el("span", "a-left", "💙"), el("span", "a-right", "💜"), el("span", "a-merge", "💙💜")),
@@ -340,7 +391,7 @@ document.addEventListener("visibilitychange", () => {
 // force: ridisegna anche se il giorno e' lo stesso (es. sono cambiate le foto delle caselle).
 async function refreshAdvent(force = false) {
   try {
-    const advent = await api("/api/advent");
+    const advent = await api(ADVENT_PATH);
     if (advent.today === state.today && !force) return;
     state.today = advent.today;
     renderAdvent(advent);
@@ -847,7 +898,7 @@ async function init() {
     // Le tre chiamate partono insieme: meno attesa.
     // Incontri a parte: se il database non risponde, il calendario si apre lo stesso.
     const [me, advent, meetings] = await Promise.all([
-      api("/api/me"), api("/api/advent"), api("/api/meetings").catch(() => ({ meetings: [] })),
+      api("/api/me"), api(ADVENT_PATH), api("/api/meetings").catch(() => ({ meetings: [] })),
     ]);
     stopLoader();
     const heart = HEART[me.id] || "💜";
@@ -858,6 +909,7 @@ async function init() {
     state.today = advent.today;
     state.meetings = meetings.meetings;
     $("greeting").textContent = "Ciao " + me.name + " " + heart;
+    if (PREVIEW) $("greeting").textContent += " · 👀 anteprima";
     renderAdvent(advent);
     renderMeetings();
     $("tabs").hidden = false;

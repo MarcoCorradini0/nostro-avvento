@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "dev.avvento"
-version = "0.4.1"
+version = "0.4.2"
 
 application {
     mainClass.set("dev.avvento.ApplicationKt")
