@@ -104,17 +104,19 @@ class PhotoService(
 ) {
     private val mutex = Mutex()
 
-    suspend fun list(): List<PhotoMeta> = store.list().sortedBy { it.at }
+    /** In ordine di caricamento. Si confrontano gli istanti, non le stringhe ("...:00Z" vs "...:00.5Z"). */
+    suspend fun list(): List<PhotoMeta> =
+        store.list().sortedWith(compareBy<PhotoMeta> { runCatching { Instant.parse(it.at) }.getOrDefault(Instant.EPOCH) }.thenBy { it.id })
 
     suspend fun get(id: String): Photo? = store.get(id)
 
     /**
-     * Quale foto va in ogni casella "con foto". Gli id sono UUID casuali: ordinandoli otteniamo
-     * un ordine a caso ma stabile. Casella k-esima -> foto k-esima, mai doppioni:
-     * se le foto sono meno delle caselle, le ultime caselle restano con la loro animazione.
+     * Quale foto va in ogni casella "con foto": in ordine di caricamento, la prima foto nella prima
+     * casella con foto, la seconda nella seconda... Mai doppioni: se le foto sono meno delle caselle,
+     * le ultime caselle restano con la loro animazione.
      */
     suspend fun forDoors(days: List<Int>): Map<Int, String> =
-        days.sorted().zip(store.list().map { it.id }.sorted()).toMap()
+        days.sorted().zip(list().map { it.id }).toMap()
 
     suspend fun add(user: User, bytes: ByteArray): PhotoMeta = mutex.withLock {
         val mime = sniff(bytes) ?: throw ApiException(HttpStatusCode.UnsupportedMediaType, "Serve una foto JPEG, PNG o WebP")

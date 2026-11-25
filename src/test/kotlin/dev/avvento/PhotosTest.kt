@@ -55,6 +55,15 @@ class PhotosTest {
     }
 
     @Test
+    fun `la prima foto caricata va nella prima casella con foto, la seconda nella seconda`() = runTest {
+        val times = ArrayDeque(listOf("2026-11-26T09:00:00.500Z", "2026-11-26T09:00:01Z", "2026-11-26T09:00:01.250Z"))
+        val s = PhotoService(InMemoryPhotoStore(), PhotoService.MAX_TOTAL_MEMORY, now = { java.time.Instant.parse(times.removeFirst()) })
+        val ids = List(3) { s.add(marco, jpeg).id }
+        assertEquals(mapOf(1 to ids[0], 7 to ids[1], 9 to ids[2]), s.forDoors(listOf(9, 1, 7, 16)))
+        assertEquals(ids, s.list().map { it.id })
+    }
+
+    @Test
     fun `via HTTP la foto si carica, si scarica con la chiave e compare solo nelle caselle aperte`() = testApplication {
         val config = Config.fromEnv(mapOf("FAKE_TODAY" to "2026-12-02", "ADVENT_YEAR" to "2026"))
         val calendar = AdventCalendar(
