@@ -9,8 +9,8 @@ import java.io.File
 import java.time.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class AdventTest {
@@ -39,12 +39,12 @@ class AdventTest {
     }
 
     @Test
-    fun `le animazioni sconosciute sono rifiutate al caricamento`() {
+    fun `un'animazione sconosciuta viene ignorata, il calendario parte lo stesso`() {
         val file = File.createTempFile("advent", ".json").apply { deleteOnExit() }
         file.writeText("""[{"day": 1, "title": "Ciao", "anim": "hearts"}]""")
         assertEquals("hearts", AdventCalendar.load(file.path, 2026).doors(LocalDate.of(2026, 12, 1)).first().content?.anim)
         file.writeText("""[{"day": 1, "title": "Ciao", "anim": "fuochi"}]""")
-        assertFailsWith<IllegalStateException> { AdventCalendar.load(file.path, 2026) }
+        assertNull(AdventCalendar.load(file.path, 2026).doors(LocalDate.of(2026, 12, 1)).first().content?.anim)
     }
 
     @Test

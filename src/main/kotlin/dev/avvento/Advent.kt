@@ -2,6 +2,7 @@ package dev.avvento
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import org.slf4j.LoggerFactory
 import java.io.File
 import java.time.LocalDate
 
@@ -70,10 +71,14 @@ class AdventCalendar(
             require(file.exists()) { "File dell'avvento non trovato: ${file.absolutePath}" }
             val list = json.decodeFromString<List<AdventEntry>>(file.readText())
             require(list.all { it.day in 1..LAST_DAY }) { "Ogni casella deve avere day tra 1 e $LAST_DAY" }
-            list.firstOrNull { it.anim != null && it.anim !in ANIMATIONS }?.let {
-                error("Casella ${it.day}: anim '${it.anim}' sconosciuta, usa una tra $ANIMATIONS")
+            // Un nome di animazione sbagliato non deve bloccare il calendario: la togliamo e lo diciamo nel log.
+            val checked = list.map {
+                if (it.anim == null || it.anim in ANIMATIONS) it
+                else it.copy(anim = null).also { e ->
+                    LoggerFactory.getLogger("avvento").warn("Casella {}: anim '{}' sconosciuta (ignorata), usa una tra {}", e.day, it.anim, ANIMATIONS)
+                }
             }
-            return AdventCalendar(list.associateBy { it.day }, year)
+            return AdventCalendar(checked.associateBy { it.day }, year)
         }
     }
 }
