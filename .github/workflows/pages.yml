@@ -33,8 +33,7 @@ jobs:
       - name: Configura l'indirizzo dell'API
         env:
           API_BASE: ${{ vars.API_BASE }}
-        run: printf 'window.AVVENTO_API = "%s";
-' "$API_BASE" > web/config.js
+        run: printf 'window.AVVENTO_API = "%s";\n' "$API_BASE" > web/config.js
 
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
