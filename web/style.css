@@ -156,9 +156,25 @@ dialog h2 { font-family: Georgia, serif; font-weight: 400; margin: 0 0 10px; }
 @keyframes flake { to { transform: translateY(120px) rotate(180deg); } }
 .a-gift { font-size: 3.4rem; animation: shake-gift 2s ease-in-out infinite; }
 @keyframes shake-gift { 0%, 40%, 100% { transform: rotate(0); } 10% { transform: rotate(-12deg); } 20% { transform: rotate(12deg); } 30% { transform: rotate(-6deg); } }
-.a-sleigh { position: absolute; top: 30px; font-size: 2rem; animation: sleigh 4.5s linear infinite; }
-@keyframes sleigh { from { left: -90px; transform: translateY(10px); } 50% { transform: translateY(-12px); } to { left: 100%; transform: translateY(6px); } }
-.a-moon { position: absolute; right: 14px; top: 6px; font-size: 1.5rem; opacity: .8; }
+.a-sleigh, .a-trail { position: absolute; top: 34px; left: 100%; white-space: nowrap; font-size: 2.2rem; animation: sleigh 4.5s linear infinite; }
+.a-trail { font-size: .8rem; top: 52px; opacity: .8; animation-delay: var(--d); }
+@keyframes sleigh { from { left: 100%; transform: translateY(8px); } 25% { transform: translateY(-10px); } 50% { transform: translateY(6px); } 75% { transform: translateY(-8px); } to { left: -60px; transform: translateY(4px); } }
+.a-moon { position: absolute; left: 14px; top: 6px; font-size: 1.5rem; opacity: .8; }
+
+.anim-aurora { height: 110px; border-radius: 14px; background: linear-gradient(#0b1530, #17284d 70%, #1f3560); }
+.a-veil { position: absolute; left: -20%; width: 140%; height: 46px; border-radius: 50%; filter: blur(14px); opacity: .75; mix-blend-mode: screen; animation: veil 6s ease-in-out infinite alternate; }
+.a-veil0 { top: 14px; background: linear-gradient(90deg, transparent, #3ff2a0, #6be3c8, transparent); }
+.a-veil1 { top: 30px; background: linear-gradient(90deg, transparent, #9b6bff, #3ff2a0, transparent); animation-duration: 7.5s; animation-delay: -2s; }
+.a-veil2 { top: 6px; height: 30px; background: linear-gradient(90deg, transparent, #c77dff, transparent); animation-duration: 5s; animation-delay: -1s; opacity: .55; }
+@keyframes veil { 0% { transform: translateX(-8%) skewX(-12deg) scaleY(.8); } 50% { transform: translateX(4%) skewX(10deg) scaleY(1.25); } 100% { transform: translateX(10%) skewX(-6deg) scaleY(.9); } }
+.anim-aurora .a-star { color: #fff; font-size: .6rem; }
+.a-hills { position: absolute; left: 0; right: 0; bottom: -2px; height: 26px; background: #0a1124; clip-path: polygon(0 60%, 18% 20%, 34% 55%, 52% 10%, 70% 50%, 86% 25%, 100% 55%, 100% 100%, 0 100%); }
+
+.anim-natale { height: 120px; flex-direction: column; gap: 8px; }
+.a-xmas { display: flex; font-family: Georgia, serif; font-size: 2.3rem; color: #c0392b; text-shadow: 0 0 12px rgba(244, 201, 93, .9); }
+.a-letter { display: inline-block; animation: letter 1.8s ease-in-out var(--d) infinite; }
+@keyframes letter { 0%, 100% { transform: translateY(0); color: #c0392b; } 30% { transform: translateY(-10px); color: #d4a017; } 60% { transform: translateY(0); } }
+.a-xmas-hearts { font-size: 1.5rem; animation: bob 2s ease-in-out infinite; }
 .a-tree { font-size: 3.6rem; }
 .a-spark { position: absolute; font-size: 1rem; opacity: 0; transform: translate(var(--px), var(--py)); animation: spark 1.6s ease-in-out var(--d) infinite; }
 @keyframes spark { 50% { opacity: 1; transform: translate(var(--px), var(--py)) scale(1.3); } }
@@ -353,7 +369,7 @@ dialog h2 { font-family: Georgia, serif; font-weight: 400; margin: 0 0 10px; }
   .splash *, .together { animation: none !important; opacity: 1 !important; }
   .scene * { animation: none !important; }
   .train { transform: translateX(200px); }
-  .a-float, .a-pop, .a-arrive, .a-left, .a-right, .a-flake, .a-shoot { display: none; }
-  .a-sleigh { left: 30%; }
+  .a-float, .a-pop, .a-arrive, .a-left, .a-right, .a-flake, .a-shoot, .a-trail { display: none; }
+  .a-sleigh { left: 45%; }
   .a-merge { opacity: 1; }
 }

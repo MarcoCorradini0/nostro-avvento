@@ -63,7 +63,7 @@ class AdventCalendar(
         const val LAST_DAY = 25
 
         /** Le animazioni che la pagina sa disegnare (vedi web/app.js). */
-        val ANIMATIONS = setOf("hearts", "beat", "plane", "kiss", "together", "snow", "gift", "sleigh", "tree", "stars")
+        val ANIMATIONS = setOf("hearts", "beat", "plane", "kiss", "together", "snow", "gift", "sleigh", "tree", "stars", "aurora", "natale")
         private val json = Json { ignoreUnknownKeys = true }
 
         fun load(path: String, year: Int): AdventCalendar {

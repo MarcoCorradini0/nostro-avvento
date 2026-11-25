@@ -287,10 +287,42 @@ const ANIMS = {
     box.append(el("span", "a-gift", "🎁"));
     ["💙", "💜", "✨"].forEach((h, i) => box.append(el("span", "a-pop a-pop" + i, h)));
   },
-  // la slitta con la renna che attraversa il cielo
+  // la renna che attraversa il cielo (da destra a sinistra: l'emoji guarda a sinistra)
   sleigh: box => {
-    const s = el("span", "a-sleigh", "🦌🛷");
-    box.append(s, el("span", "a-moon", "🌙"));
+    box.append(el("span", "a-moon", "🌙"), el("span", "a-sleigh", "🦌"));
+    for (let i = 0; i < 3; i++) {
+      const s = el("span", "a-trail", "✨");
+      s.style.setProperty("--d", (0.18 + i * 0.18).toFixed(2) + "s");
+      box.append(s);
+    }
+  },
+  // l'aurora boreale: veli verdi e viola che ondeggiano in un cielo stellato
+  aurora: box => {
+    for (let i = 0; i < 3; i++) box.append(el("span", "a-veil a-veil" + i));
+    [[10, 18], [26, 62], [48, 12], [68, 40], [86, 16], [92, 66]].forEach(([x, y], i) => {
+      const s = el("span", "a-star", "✦");
+      s.style.setProperty("--x", x + "%");
+      s.style.setProperty("--y", y + "%");
+      s.style.setProperty("--d", (i * 0.5).toFixed(1) + "s");
+      box.append(s);
+    });
+    box.append(el("span", "a-hills"));
+  },
+  // gli auguri di Natale: le lettere che ondeggiano, la neve e i nostri cuori
+  natale: box => {
+    for (let i = 0; i < 8; i++) {
+      const f = el("span", "a-flake", "❄");
+      f.style.setProperty("--x", (4 + i * 12.5) + "%");
+      f.style.setProperty("--d", (i * 0.4).toFixed(2) + "s");
+      box.append(f);
+    }
+    const words = el("span", "a-xmas");
+    [..."Buon Natale"].forEach((c, i) => {
+      const l = el("span", "a-letter", c === " " ? " " : c);
+      l.style.setProperty("--d", (i * 0.09).toFixed(2) + "s");
+      words.append(l);
+    });
+    box.append(words, el("span", "a-xmas-hearts", "💙🎄💜"));
   },
   // l'albero con le lucine che brillano
   tree: box => {
