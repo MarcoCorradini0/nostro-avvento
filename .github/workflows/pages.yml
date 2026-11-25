@@ -1,6 +1,7 @@
 # Pubblica la pagina (cartella web/) su GitHub Pages: gratis, sempre accesa, veloce (CDN).
 # Parte solo quando cambia qualcosa in web/.
-# Se il deploy fallisce con "No artifacts named github-pages" e' un intoppo di GitHub: basta rilanciarlo.
+# Due job: prima si prepara il pacchetto, poi si pubblica. Con un job solo a volte GitHub
+# non trovava ancora il pacchetto ("No artifacts named github-pages").
 name: Pages
 
 on:
@@ -19,14 +20,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  build:
     # Finche' non c'e' l'indirizzo di Render (variabile API_BASE) il job viene saltato, non fallisce.
     if: vars.API_BASE != ''
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v7
 
@@ -35,11 +33,21 @@ jobs:
       - name: Configura l'indirizzo dell'API
         env:
           API_BASE: ${{ vars.API_BASE }}
-        run: printf 'window.AVVENTO_API = "%s";\n' "$API_BASE" > web/config.js
+        run: printf 'window.AVVENTO_API = "%s";
+' "$API_BASE" > web/config.js
 
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:
           path: web
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - id: deployment
         uses: actions/deploy-pages@v5
