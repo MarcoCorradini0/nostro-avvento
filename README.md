@@ -110,8 +110,8 @@ cp advent.example.json deploy/k8s/secrets/advent.json
 k3d cluster create avvento -p "8090:80@loadbalancer" --api-port 127.0.0.1:6550 --wait
 
 # 3. Build dell'immagine e import nel cluster (a ogni nuova versione)
-docker build -t avvento:0.4.2 .
-k3d image import avvento:0.4.2 -c avvento
+docker build -t avvento:1.0.0 .
+k3d image import avvento:1.0.0 -c avvento
 
 # 4. Deploy
 kubectl apply -k deploy/k8s
