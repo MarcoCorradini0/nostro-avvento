@@ -596,6 +596,8 @@ function meetingCard(m) {
   } else if (isOpen(m) && !isPast(m)) {
     add("Modifica", "ghost", () => openMeetingForm(m));
     add("Annulla", "secondary", () => confirm("Annullare questo incontro?") && act(m, "cancel", "Incontro annullato"));
+  } else if (m.status === "CANCELLED" || m.status === "DECLINED") {
+    add("Togli dalla lista", "ghost", () => confirm("Togliere questo incontro dalla lista?") && act(m, "remove", "Tolto dalla lista"));
   }
   if (actions.childElementCount) card.appendChild(actions);
   return card;

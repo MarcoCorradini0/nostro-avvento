@@ -26,6 +26,7 @@ class ResilienceTest {
         override suspend fun get(id: String): Meeting? = throw SQLException("scaduto")
         override suspend fun save(meeting: Meeting) = throw SQLException("scaduto")
         override suspend fun count(): Int = throw SQLException("scaduto")
+        override suspend fun delete(id: String) = throw SQLException("scaduto")
     }
 
     private object DownPhotos : PhotoStore {

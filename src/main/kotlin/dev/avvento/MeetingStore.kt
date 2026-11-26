@@ -19,6 +19,7 @@ interface MeetingStore {
     suspend fun get(id: String): Meeting?
     suspend fun save(meeting: Meeting)
     suspend fun count(): Int
+    suspend fun delete(id: String)
 }
 
 /** Si perde tutto al riavvio: va bene in locale e nei test. */
@@ -28,6 +29,7 @@ class InMemoryMeetingStore : MeetingStore {
     override suspend fun get(id: String) = data[id]
     override suspend fun save(meeting: Meeting) { data[meeting.id] = meeting }
     override suspend fun count() = data.size
+    override suspend fun delete(id: String) { data.remove(id) }
 }
 
 /**
@@ -77,6 +79,11 @@ class PostgresMeetingStore(private val db: Postgres) : MeetingStore {
 
     override suspend fun count(): Int = db.sql { c ->
         c.createStatement().use { st -> st.executeQuery("SELECT count(*) FROM meetings").use { rs -> rs.next(); rs.getInt(1) } }
+    }
+
+    override suspend fun delete(id: String) = db.sql { c ->
+        c.prepareStatement("DELETE FROM meetings WHERE id = ?").use { st -> st.setString(1, id); st.executeUpdate() }
+        Unit
     }
 }
 

@@ -264,6 +264,15 @@ private fun Route.meetingRoutes(users: UserDirectory, meetings: MeetingService, 
         post("/{id}/decline") { call.handle { me -> meetings.decline(me, call.parameters["id"]!!) } }
         post("/{id}/cancel") { call.handle { me -> meetings.cancel(me, call.parameters["id"]!!) } }
         post("/{id}/modify") { call.handle { me -> meetings.modify(me, call.parameters["id"]!!, call.receive<MeetingRequest>()) } }
+        post("/{id}/remove") {
+            call.requireUser(users) ?: return@post
+            try {
+                meetings.remove(call.parameters["id"]!!)
+                call.respond(HttpStatusCode.OK, mapOf("ok" to true))
+            } catch (e: ApiException) {
+                call.respond(e.status, ErrorResponse(e.message ?: "Errore"))
+            }
+        }
     }
 }
 

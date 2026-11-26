@@ -69,6 +69,18 @@ class MeetingsTest {
     }
 
     @Test
+    fun `si tolgono dalla lista solo gli incontri annullati o rifiutati`() = runTest {
+        val s = service()
+        val open = s.propose(marco, MeetingRequest("2026-12-20", "Cena"))
+        assertEquals(HttpStatusCode.Conflict, assertFailsWith<ApiException> { s.remove(open.id) }.status)
+        val prova = s.propose(marco, MeetingRequest("2026-12-21", "prova database"))
+        s.cancel(marco, prova.id)
+        s.remove(prova.id)
+        assertEquals(listOf(open.id), s.list().map { it.id })
+        assertEquals(HttpStatusCode.NotFound, assertFailsWith<ApiException> { s.remove(prova.id) }.status)
+    }
+
+    @Test
     fun `date passate, testi troppo lunghi e incontri inesistenti sono rifiutati`() = runTest {
         val s = service()
         assertEquals(HttpStatusCode.BadRequest, assertFailsWith<ApiException> { s.propose(marco, MeetingRequest("2026-11-30")) }.status)

@@ -117,6 +117,15 @@ class MeetingService(
         updated
     }
 
+    /** Toglie dalla lista un incontro gia' chiuso (annullato o rifiutato). Lo possono fare tutti e due. */
+    suspend fun remove(id: String) = mutex.withLock {
+        val m = load(id)
+        if (m.status != MeetingStatus.CANCELLED && m.status != MeetingStatus.DECLINED) {
+            throw ApiException(HttpStatusCode.Conflict, "Si possono togliere solo gli incontri annullati o rifiutati")
+        }
+        store.delete(id)
+    }
+
     private suspend fun answer(user: User, id: String, kind: EventKind, status: MeetingStatus): Meeting = mutex.withLock {
         val m = load(id)
         if (m.status != MeetingStatus.PENDING || m.waitingFor != user.id) {
